@@ -1,0 +1,55 @@
+# SQLite. Versions 3.8.0 and up are supported.
+#
+# Multi-tenant layout (cnfs_tenanted):
+#   primary : TENANTED. One SQLite file per tenant (storage/tenants/%{tenant}.sqlite3).
+#   global  : plain, untenanted. Holds the Tenant registry (storage/*_global.sqlite3).
+#
+# The tenanted `migrations_paths` is read from the CnfsSupport::TenantMigrations
+# registry, which engines (including cnfs_tenanted) populate at gem-load time.
+# This runs in database.yml's ERB, which Rails evaluates BEFORE initializers —
+# that is why config/application.rb requires the registry before Bundler.require.
+<%% require "cnfs_support/tenant_migrations" %>
+<%% tenant_migration_paths = CnfsSupport::TenantMigrations.tenant_paths %>
+
+default: &default
+  adapter: sqlite3
+  max_connections: <%%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+
+development:
+  primary:
+    <<: *default
+    database: storage/tenants/%{tenant}.sqlite3
+    tenanted: true
+    migrations_paths: <%%= tenant_migration_paths.inspect %>
+  global:
+    <<: *default
+    database: storage/development_global.sqlite3
+    migrations_paths: db/global_migrate
+
+test:
+  <<: *default
+  database: storage/test.sqlite3
+
+production:
+  primary:
+    <<: *default
+    database: storage/tenants/%{tenant}.sqlite3
+    tenanted: true
+    migrations_paths: <%%= tenant_migration_paths.inspect %>
+  global:
+    <<: *default
+    database: storage/production_global.sqlite3
+    migrations_paths: db/global_migrate
+  cache:
+    <<: *default
+    database: storage/production_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: storage/production_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: storage/production_cable.sqlite3
+    migrations_paths: db/cable_migrate
