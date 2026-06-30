@@ -5,12 +5,13 @@ module CnfsTenanted
     # Wires a host Rails app for cnfs_tenanted multi-tenancy.
     #
     # This generator performs the host-app edits that an engine cannot do on its
-    # own — most importantly the database.yml rewrite and the pre-boot require of
-    # the migration-path registry, which must exist before Rails reads
-    # database.yml (Rails 7.1+ evaluates database.yml ERB before initializers).
+    # own — the database.yml rewrite, the ApplicationRecord/Controller wiring,
+    # the thin host controllers, and (by default) copying the gem's migrations
+    # into the host.
     #
-    # The gem PROVIDES the models, controllers, views, concern, and tenant
-    # migrations. This generator only WIRES the app to use them.
+    # The gem PROVIDES the models, controllers, views, and concern. This
+    # generator WIRES the app to use them and copies in migrations (copy-in is
+    # the default; see the README for the in-place opt-in).
     #
     #   bin/rails generate cnfs_tenanted:install
     #
@@ -18,23 +19,31 @@ module CnfsTenanted
       source_root File.expand_path("templates", __dir__)
 
       desc "Wire this app for cnfs_tenanted multi-tenancy (database.yml, " \
-           "ApplicationRecord/Controller, host controllers, storage dir)."
+           "ApplicationRecord/Controller, host controllers, migrations, storage dir)."
 
-      # 1. Pre-boot require of the registry, placed BEFORE Bundler.require so it
-      #    exists when database.yml's ERB (and any engine registration) runs.
-      def require_registry_pre_boot
+      # 1. Write the in-place opt-in require into application.rb, COMMENTED OUT.
+      #    Uncommenting this one line is the entire opt-in: each engine then
+      #    appends its migration paths to the registry as it loads, and
+      #    config/database.yml (which already checks `defined?`) feeds them to
+      #    the right databases. No database.yml edit is ever needed.
+      #
+      #    It must sit ABOVE Bundler.require, because Rails evaluates
+      #    database.yml before initializers — a config setting would be read
+      #    too late.
+      def write_inplace_optin
         marker = 'require_relative "boot"'
         injection = <<~RUBY
 
-          # Load the CNFS tenant migration-path registry before gems load, so
-          # engines can register their tenant migration paths at gem-load time
-          # and database.yml's ERB can read them. Must precede Bundler.require
-          # and database.yml evaluation.
-          require "cnfs_support/tenant_migrations"
+          # CNFS in-place migrations (opt-in): uncomment the line below to read
+          # engine migrations directly from the gems instead of copying them
+          # into this app. One source of truth across apps; a gem migration
+          # change propagates on `bundle update`. Must stay above Bundler.require.
+          # See the cnfs_tenanted README ("Migrations") for details.
+          # require "cnfs_support/engine_migration_paths"
         RUBY
 
-        if File.read(application_rb).include?("cnfs_support/tenant_migrations")
-          say_status :skip, "registry require already present in application.rb", :yellow
+        if File.read(application_rb).include?("cnfs_support/engine_migration_paths")
+          say_status :skip, "in-place opt-in already present in application.rb", :yellow
         else
           inject_into_file application_rb, injection, after: marker
         end

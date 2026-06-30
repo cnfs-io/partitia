@@ -4,13 +4,10 @@ module CnfsTenanted
   # tenancy. Activated from the Engine's `console` block (development/test).
   #
   # Adds:
-  #   vcd "apple"   -> switch the console into a tenant's database context
+  #   vst "apple"   -> switch the console into a tenant's database context
   #   t, ta, tc, tf, tl   -> Tenant shortcuts (via cnfs_dev's def_model_shortcuts)
   #   a, aa, ac, af, al   -> Account shortcuts
   #
-  # Dependency direction is one-way: cnfs_tenanted reaches into cnfs_dev's
-  # public console API; cnfs_dev never references tenancy. If cnfs_dev is not
-  # loaded (e.g. production), this is a no-op.
   module PryConsole
     module_function
 
@@ -29,7 +26,7 @@ module CnfsTenanted
         end
 
         # Switch the console into a tenant's database context (blank clears it).
-        main.define_singleton_method(:vcd) do |tenant = ""|
+        main.define_singleton_method(:vst) do |tenant = ""|
           ApplicationRecord.current_tenant = tenant
         end
 

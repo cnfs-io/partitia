@@ -25,30 +25,27 @@
 
 namespace :db do
   namespace :migrate do
-    desc "Migration status for one tenant of the :primary DB (set ARTENANT=<tenant>)"
-    task status_primary: :load_config do
-      tenant = ENV["ARTENANT"]
-      abort "Set ARTENANT=<tenant_name>, e.g. ARTENANT=apple rails db:migrate:status_primary" if tenant.nil? || tenant.empty?
+    namespace :status do
+      desc "Migration status for tenants of the :primary DB (set ARTENANT=<tenant> to filter to one)"
+      task primary: :load_config do
+        tenants = CnfsTenanted::MigrationStatus.tenant_names
 
-      tenants = CnfsTenanted::MigrationStatus.tenant_names
-      unless tenants.include?(tenant)
-        abort "Tenant #{tenant.inspect} does not exist. Known tenants: #{tenants.join(', ')}"
-      end
+        if (filter = ENV["ARTENANT"].presence)
+          unless tenants.include?(filter)
+            abort "Tenant #{filter.inspect} does not exist. Known tenants: #{tenants.join(', ')}"
+          end
+          tenants = [filter]
+        end
 
-      CnfsTenanted::MigrationStatus.print(tenant)
-    end
+        if tenants.empty?
+          puts "No tenants found."
+          next
+        end
 
-    desc "Migration status for every tenant of the :primary DB"
-    task status_all: :load_config do
-      tenants = CnfsTenanted::MigrationStatus.tenant_names
-      if tenants.empty?
-        puts "No tenants found."
-        next
-      end
-
-      tenants.each do |t|
-        CnfsTenanted::MigrationStatus.print(t)
-        puts
+        tenants.each do |t|
+          CnfsTenanted::MigrationStatus.print(t)
+          puts
+        end
       end
     end
   end

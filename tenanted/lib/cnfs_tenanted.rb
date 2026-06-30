@@ -1,4 +1,4 @@
-require "cnfs_support/tenant_migrations"
+require "activerecord-tenanted"
 require "cnfs_tenanted/version"
 require "cnfs_tenanted/engine"
 
@@ -14,4 +14,13 @@ require "cnfs_tenanted/engine"
 #
 # Install into a host app with: bin/rails generate cnfs_tenanted:install
 module CnfsTenanted
+  def self.global_migrations_paths
+    @global_migrations_paths ||= []
+  end
+
+  def self.global_migrations
+    global_migrations_paths.each_with_object([]) do |path, ary|
+      ary.concat(Pathname.new(path).children.collect(&:to_s))
+    end
+  end
 end
