@@ -9,7 +9,7 @@ module CnfsDev
     # global Object namespace while preserving the same prompt ergonomics:
     #
     #   def_model_shortcuts "b", Okf::Bundle
-    #   bf 3   # => Okf::Bundle.find(3), also stored in local `v`
+    #   bf 3   # => Okf::Bundle.find(3), memoized for repeat calls
     #
     # Everything here is guarded so it stays inert outside a Rails app.
     module ConsoleMethods
@@ -27,28 +27,36 @@ module CnfsDev
       # common scratch variable names (a, b, c...).
       #
       #   <prefix>    => the class itself
-      #   <prefix>a   => .all
-      #   <prefix>c   => .create(attributes = {})
-      #   <prefix>f   => .find(id) (or .first when no id); stored in local `v`
-      #   <prefix>l   => .last
+      #   <prefix>a   => .all (never memoized)
+      #   <prefix>c   => .create(attributes = {}); on success it busts the
+      #                  <prefix>l memo so the next <prefix>l returns the new row
+      #   <prefix>f   => .find(id) (or .first when no id); memoized per id
+      #   <prefix>l   => .last; memoized
+      #
+      # The memoized readers (<prefix>f, <prefix>l) return the same object on
+      # repeat calls with no query. Append "!" to force a refresh (<prefix>f!,
+      # <prefix>l!), and use `uv` to clear memos.
       def def_model_shortcuts(prefix, klass)
         prefix = "v#{prefix}" if prefix.length == 1
 
         define_console_method(prefix) { klass }
         define_console_method("#{prefix}a") { klass.all }
-        define_console_method("#{prefix}c") { |attributes = {}| klass.create(attributes) }
 
-        define_console_method("#{prefix}f") do |id = nil|
-          record = id ? klass.find(id) : klass.first
-          Pry.toplevel_binding.local_variable_set(:v, record)
+        define_console_method("#{prefix}c") do |attributes = {}|
+          record = klass.create(attributes)
+          shortcut_memo.delete_if { |k, _| k.first == :"#{prefix}l" } if record.persisted?
+          record
         end
 
-        define_console_method("#{prefix}l") { klass.last }
+        define_memoized_console_method("#{prefix}f") { |id = nil| id ? klass.find(id) : klass.first }
+        define_memoized_console_method("#{prefix}l") { klass.last }
       end
 
-      # Clear the `v` scratch local set by the `<prefix>f` shortcuts.
-      def uv
-        Pry.toplevel_binding.local_variable_set(:v, nil)
+      # Clear memoized shortcut records. `uv` clears everything; `uv :vtf`
+      # clears the memos for one shortcut family.
+      def uv(name = nil)
+        name ? shortcut_memo.delete_if { |k, _| k.first == name.to_sym } : shortcut_memo.clear
+        nil
       end
 
       # --- Project reset machinery ----------------------------------------
@@ -79,6 +87,8 @@ module CnfsDev
       end
 
       def reset_project!
+        shortcut_memo.clear
+
         if defined?(@before_project_reset_hooks) && @before_project_reset_hooks&.any?
           @before_project_reset_hooks.each(&:call)
         end
@@ -107,6 +117,28 @@ module CnfsDev
       end
 
       private
+
+      # Per-session store for memoized shortcut records, keyed by
+      # [shortcut_name, *args]. Lives on the console `main` object.
+      def shortcut_memo
+        @shortcut_memo ||= {}
+      end
+
+      # Define a memoized reader plus a "!" force-refresh twin from one fetch
+      # block. The reader returns the cached record on repeat calls (keyed by
+      # its args); the bang always fetches and overwrites the memo.
+      def define_memoized_console_method(name, &fetch)
+        key = name.to_sym
+
+        define_console_method(name) do |*args|
+          memo = shortcut_memo
+          memo.key?([key, *args]) ? memo[[key, *args]] : (memo[[key, *args]] = fetch.call(*args))
+        end
+
+        define_console_method("#{name}!") do |*args|
+          shortcut_memo[[key, *args]] = fetch.call(*args)
+        end
+      end
 
       # Define a method on the console's singleton (the object we've been
       # extended into), rather than globally on Object.
