@@ -1,22 +1,12 @@
 module CnfsSupport
   class Railtie < ::Rails::Railtie
-    initializer :process_plugins do |app|
+    initializer :set_migrations_paths do |app|
+      CnfsSupport.set_migrations_paths_from(Rails)
       CnfsSupport.plugins.each do |plugin|
-        next unless plugin.is_a?(Class) && plugin < ::Rails::Engine
+        raise "#{plugin} must be a Rails Engine" unless plugin.is_a?(Class) && plugin < ::Rails::Engine
 
-        next unless app.config.x.migrations_in_place == true
-
-        path = plugin.root.join("db/migrate")
-        CnfsSupport.migrations_paths << path.to_s if path.exist?
+        CnfsSupport.set_migrations_paths_from(plugin)
       end
     end
-
-    # initializer :append_migrations_paths do |app|
-    #   if app.config.x.migrations_in_place == true
-    #     CnfsSupport.migrations_paths.uniq.each do |path|
-    #       app.config.paths["db/migrate"] << path
-    #     end
-    #   end
-    # end
   end
 end
