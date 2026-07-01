@@ -32,7 +32,6 @@ module CnfsDev
       #   <prefix>f   => .find(id) (or .first when no id); stored in local `v`
       #   <prefix>l   => .last
       def def_model_shortcuts(prefix, klass)
-        command_name = prefix
         prefix = "v#{prefix}" if prefix.length == 1
 
         define_console_method(prefix) { klass }
@@ -45,8 +44,6 @@ module CnfsDev
         end
 
         define_console_method("#{prefix}l") { klass.last }
-
-        Pry.config.cnfs_model_shortcut_registry << { klass: klass, command_name: command_name }
       end
 
       # Clear the `v` scratch local set by the `<prefix>f` shortcuts.
