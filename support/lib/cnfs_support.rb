@@ -36,10 +36,11 @@ module CnfsSupport
   end
 
   def self.set_migrations_paths_from(plugin)
-    CnfsSupport.migrations_paths_for.each do |key, search_path|
-      CnfsSupport.migrations_paths[key] ||= []
+    migrations_paths_for.each do |key, search_path|
+      migrations_paths[key] ||= []
+
       path = plugin.root.join(search_path)
-      CnfsSupport.migrations_paths[key] << path.to_s if path.exist?
+      migrations_paths[key] << path.to_s if path.exist?
     end
   end
 
