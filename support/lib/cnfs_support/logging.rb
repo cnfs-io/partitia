@@ -1,3 +1,4 @@
+require "active_support/concern"
 require "logger"
 
 module CnfsSupport
@@ -25,11 +26,9 @@ module CnfsSupport
   # Rails.logger only when Rails is already present, else a plain stdlib Logger,
   # so the mixin is fully usable pre-boot in a non-Rails context.
   module Logging
-    LEVELS = %i[debug info warn error fatal].freeze
+    extend ActiveSupport::Concern
 
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    LEVELS = %i[debug info warn error fatal].freeze
 
     # Instances delegate to their class-level logger so every instance of a
     # class shares one tagged logger.
@@ -37,7 +36,7 @@ module CnfsSupport
       self.class.logger
     end
 
-    module ClassMethods
+    class_methods do
       def logger
         @logger ||= CnfsSupport::Logging.build_for(name)
       end

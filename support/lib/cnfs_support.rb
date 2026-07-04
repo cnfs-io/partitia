@@ -1,5 +1,7 @@
 require_relative "cnfs_support/version"
 require_relative "cnfs_support/logging"
+require_relative "cnfs_support/instrumentable"
+require_relative "cnfs_support/model"
 require_relative "cnfs_support/railtie" if defined?(Rails::Railtie)
 require "active_support/core_ext/string/inflections"
 
