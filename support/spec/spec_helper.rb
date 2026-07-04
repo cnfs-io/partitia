@@ -20,5 +20,6 @@ RSpec.configure do |config|
   # every example so ordering never leaks configuration between specs.
   config.before do
     CnfsSupport::Logging.reset!
+    OtelSpanCapture.reset!
   end
 end

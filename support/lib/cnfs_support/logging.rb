@@ -52,6 +52,18 @@ module CnfsSupport
 
       attr_writer :backend
 
+      # Opt-in log↔trace bridge. When true AND OpenTelemetry is loaded in the
+      # host (only the case when cnfs_telemetry + its SDK are wired) AND a
+      # recording span is on the context, each emitted line is mirrored as a
+      # span event on that span. Default OFF: correlation is deliberately opt-in.
+      # `cnfs_support` never hard-references OpenTelemetry — the emit path reaches
+      # it only through a runtime `defined?` probe (see TaggedLogger#bridge_span).
+      def bridge_to_spans
+        @bridge_to_spans || false
+      end
+
+      attr_writer :bridge_to_spans
+
       # Per-tag verbosity registry. `levels[:default]` is the floor; a string
       # key overrides one tag, e.g. `levels["okf"] = :debug`.
       def levels
@@ -71,6 +83,7 @@ module CnfsSupport
       def reset!
         @backend = nil
         @levels = nil
+        @bridge_to_spans = nil
       end
 
       private
@@ -98,14 +111,39 @@ module CnfsSupport
         define_method(level) do |message = nil, &block|
           return false unless enabled?(level)
 
+          # Evaluate the block exactly once; the value feeds both the backend
+          # line and (when bridging) the span event.
           message = block.call if block
-          CnfsSupport::Logging.backend.public_send(level, "[#{@tag}] #{message}")
+          result = CnfsSupport::Logging.backend.public_send(level, "[#{@tag}] #{message}")
+          bridge_span(message, level) if CnfsSupport::Logging.bridge_to_spans
+          result
         end
       end
 
       # True when a call at `level` clears the tag's configured floor.
       def enabled?(level)
         LEVELS.index(level) >= LEVELS.index(CnfsSupport::Logging.level_for(@tag))
+      end
+
+      private
+
+      # Attach this line to the currently-active span as a span event, if any.
+      # Reaches OpenTelemetry ONLY through a runtime `defined?` probe so
+      # `cnfs_support` keeps zero OTel dependency at load time — the constant is
+      # present only when the host runs cnfs_telemetry + an OTel SDK. Silent when
+      # no span is on the context (the common case) or the span is non-recording.
+      # `log.tag` preserves the line's own component identity even when it rides a
+      # span opened by a different component's instrument(...) block.
+      def bridge_span(message, level)
+        return unless defined?(OpenTelemetry)
+
+        span = OpenTelemetry::Trace.current_span
+        return unless span.recording?
+
+        span.add_event(
+          message.to_s,
+          attributes: { "log.severity" => level.to_s, "log.tag" => @tag }
+        )
       end
     end
   end
