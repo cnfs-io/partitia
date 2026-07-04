@@ -27,6 +27,7 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
+  spec.add_dependency "activesupport", ">= 8.1.3"
   # Intentionally NO runtime dependency on Rails. The core value (the tenant
   # migration-path registry) is plain Ruby and must be usable pre-boot, before
   # Rails loads. The Railtie is defined only when Rails is already present

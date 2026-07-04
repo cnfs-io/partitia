@@ -1,10 +1,24 @@
 require_relative "cnfs_support/version"
+require_relative "cnfs_support/logging"
 require_relative "cnfs_support/railtie" if defined?(Rails::Railtie)
+require "active_support/core_ext/string/inflections"
 
 # CnfsSupport is the lean foundation gem for the CNFS family — the active_support
 # analogue. It carries dependency-light primitives that other CNFS gems and the
 # apps can depend on freely, in any environment.
 module CnfsSupport
+  # Derive a component tag from a fully-qualified class/module name: the first
+  # `::`-split segment, downcased. `"Okf::Button"` => `"okf"`. Anonymous or
+  # nameless classes (name is nil/empty) fall back to `"cnfs"`.
+  #
+  # The Logging mixin keys off this rule for its tag. Telemetry (in the separate
+  # cnfs_telemetry gem) derives the same rule from notification names, so a gem's
+  # log tags and trace instrumentation-library names stay aligned.
+  def self.component_tag(name)
+    segment = name.to_s.deconstantize.underscore
+    segment.empty? ? "cnfs" : segment
+  end
+
   # Any rails plugin can register here
   # Any migrations or global migrations will be registered here
   def self.plugins
