@@ -1,4 +1,5 @@
 require_relative "cnfs_support/version"
+require_relative "cnfs_support/config"
 require_relative "cnfs_support/logging"
 require_relative "cnfs_support/instrumentable"
 require_relative "cnfs_support/model"
@@ -35,8 +36,8 @@ module CnfsSupport
   #    In that case it can either
   #    1. Hard code it
   #         migrations_paths = ["path/1", "path/2"]
-  #    2. Use CnfsSupport's migration_paths:
-  #         migrations_paths = <% CnfsSupport.migration_paths[:primary] %>
+  #    2. Use CnfsSupport's migrations_paths, addressed by scope key:
+  #         migrations_paths = <%= CnfsSupport.migrations_paths[:some_scope] %>
   #
   # CnfsSupport migrations_paths will include paths to all engine's migrations paths
   #   so it is assumed that when using this in database.yml that you are NOT copying

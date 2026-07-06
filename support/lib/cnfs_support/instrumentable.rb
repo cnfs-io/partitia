@@ -72,5 +72,28 @@ module CnfsSupport
       subject   = "object" if subject.empty?
       "#{component}.#{subject}.#{verb}"
     end
+
+    # Enrich the currently-active span with attributes, if one is recording.
+    # Reaches OpenTelemetry ONLY through a runtime `defined?` probe, exactly like
+    # CnfsSupport::Logging#bridge_span — so this gem keeps zero OTel dependency at
+    # load time; the constant exists only when the host runs cnfs_telemetry + an
+    # OTel SDK. Silent when OTel is undefined or no recording span is on the
+    # context (e.g. an untenanted request, or telemetry not installed).
+    #
+    # Used by cnfs_tenanted to stamp tenant.subdomain / tenant.handle onto the
+    # request span once each becomes known. `nil` values are dropped rather than
+    # written. Baggage propagation (which needs a Context attach/detach lifecycle)
+    # stays with the caller that owns the request boundary — see the tenanted
+    # middleware.
+    def self.set_span_context(**attrs)
+      return unless defined?(OpenTelemetry)
+
+      span = OpenTelemetry::Trace.current_span
+      return unless span.recording?
+
+      attrs.each do |key, value|
+        span.set_attribute(key.to_s, value) unless value.nil?
+      end
+    end
   end
 end

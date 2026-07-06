@@ -28,6 +28,11 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "activesupport", ">= 8.1.3"
+  # anyway_config fits the charter: environment-agnostic, no Rails dependency,
+  # usable pre-boot (its very purpose is resolving config before/without Rails).
+  # Provides the CnfsSupport::Config base class every CNFS gem derives its
+  # config classes from (YAML -> credentials -> ENV resolution, typed attrs).
+  spec.add_dependency "anyway_config", "~> 2.7"
   # Intentionally NO runtime dependency on Rails. The core value (the tenant
   # migration-path registry) is plain Ruby and must be usable pre-boot, before
   # Rails loads. The Railtie is defined only when Rails is already present
