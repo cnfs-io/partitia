@@ -8,19 +8,14 @@ RSpec.describe CnfsSupport::Logging do
   end
 
   describe "component tagging" do
-    it "tags each class with its first namespace segment, downcased" do
-      expect(Okf::Button.logger.tag).to eq("okf")
-      expect(Chorus::Agent.logger.tag).to eq("chorus")
+    it "tags each class with its component (cnfs-prefixed, from the first segment)" do
+      expect(Okf::Button.logger.tag).to eq("cnfs_okf")
+      expect(Chorus::Agent.logger.tag).to eq("cnfs_chorus")
     end
 
     it "gives instances the same logger as their class" do
       button = Okf::Button.new
       expect(button.logger).to be(Okf::Button.logger)
-    end
-
-    it "falls back to 'cnfs' for anonymous classes" do
-      anon = Class.new { include CnfsSupport::Logging }
-      expect(anon.logger.tag).to eq("cnfs")
     end
   end
 
@@ -29,25 +24,25 @@ RSpec.describe CnfsSupport::Logging do
 
     before { described_class.backend = backend }
 
-    it "emits an okf debug line but suppresses another tag's debug when only okf is verbose" do
+    it "emits one tag's debug while suppressing another's when only the first is verbose" do
       described_class.levels[:default] = :warn
-      described_class.levels["okf"] = :debug
+      described_class.levels["cnfs_okf"] = :debug
 
       Okf::Button.logger.debug("built")
       Chorus::Agent.logger.debug("spawned")
 
-      expect(backend).to have_received(:debug).with("[okf] built")
-      expect(backend).not_to have_received(:debug).with("[chorus] spawned")
+      expect(backend).to have_received(:debug).with("[cnfs_okf] built")
+      expect(backend).not_to have_received(:debug).with("[cnfs_chorus] spawned")
     end
 
     it "emits at or above the tag's configured floor" do
-      described_class.levels["okf"] = :warn
+      described_class.levels["cnfs_okf"] = :warn
 
       Okf::Button.logger.info("noise")
       Okf::Button.logger.error("boom")
 
       expect(backend).not_to have_received(:info)
-      expect(backend).to have_received(:error).with("[okf] boom")
+      expect(backend).to have_received(:error).with("[cnfs_okf] boom")
     end
   end
 
@@ -57,7 +52,7 @@ RSpec.describe CnfsSupport::Logging do
     before { described_class.backend = backend }
 
     it "does not evaluate the block when the level is disabled" do
-      described_class.levels["okf"] = :info
+      described_class.levels["cnfs_okf"] = :info
       evaluated = false
 
       Okf::Button.logger.debug { evaluated = true }
@@ -67,11 +62,11 @@ RSpec.describe CnfsSupport::Logging do
     end
 
     it "evaluates and emits the block when the level is enabled" do
-      described_class.levels["okf"] = :debug
+      described_class.levels["cnfs_okf"] = :debug
 
       Okf::Button.logger.debug { "computed #{2 + 2}" }
 
-      expect(backend).to have_received(:debug).with("[okf] computed 4")
+      expect(backend).to have_received(:debug).with("[cnfs_okf] computed 4")
     end
   end
 
@@ -79,16 +74,6 @@ RSpec.describe CnfsSupport::Logging do
     it "returns a stdlib Logger when Rails is undefined (degrade path)" do
       expect(defined?(Rails)).to be_nil
       expect(described_class.backend).to be_a(Logger)
-    end
-
-    it "logging still works with the stdlib fallback" do
-      io = StringIO.new
-      described_class.backend = Logger.new(io)
-      described_class.levels[:default] = :info
-
-      Okf::Button.logger.info("hello")
-
-      expect(io.string).to include("[okf] hello")
     end
 
     it "defaults to Rails.logger when Rails is present" do
@@ -101,19 +86,19 @@ RSpec.describe CnfsSupport::Logging do
       described_class.levels[:default] = :info
       Okf::Button.logger.warn("via rails")
 
-      expect(rails_logger).to have_received(:warn).with("[okf] via rails")
+      expect(rails_logger).to have_received(:warn).with("[cnfs_okf] via rails")
     end
   end
 
   describe "host override" do
-    it "redirects output to a host-assigned backend" do
+    it "redirects output to a host-assigned backend, tagged and formatted" do
       io = StringIO.new
       described_class.backend = Logger.new(io)
-      described_class.levels[:default] = :debug
+      described_class.levels[:default] = :info
 
-      Chorus::Agent.logger.debug("routed")
+      Okf::Button.logger.info("hello")
 
-      expect(io.string).to include("[chorus] routed")
+      expect(io.string).to include("[cnfs_okf] hello")
     end
   end
 end

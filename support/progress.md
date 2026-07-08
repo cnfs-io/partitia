@@ -87,3 +87,46 @@ establishes the active span, and the `logger.info` line surfaces as a span event
 harness was NOT added to `cnfs_support`'s suite — `cnfs_telemetry` is not on this
 gem's load path, and the plan says skip it rather than add a cross-gem dep; the
 unit harness above satisfies the gate.
+
+## Plan 006 — Config adoption (redaction surface + family audit)
+
+**WS3 — redaction/PII config surface.** New
+`CnfsSupport::RedactionConfig < CnfsSupport::Config`
+(`config_name :cnfs_redaction`, `lib/cnfs_support/redaction_config.rb`, wired
+into `cnfs_support.rb`). It owns the family-wide "never log / never attach as a
+span attribute" list as **config, not scattered constants**:
+- `DEFAULT_FIELDS` — `sub`, `subject`, `email`, `access_key_id`, `principal_id`,
+  session ids (`session_id`, `sid`, `session`), and the OIDC/secret token names
+  from the logging/telemetry redaction rules (`id_token`, `access_token`,
+  `refresh_token`, `code`, `code_verifier`, `client_secret`, `secret`,
+  `password`, `hmac_key`).
+- **Extensible (merge, not replace):** `additional_fields` (via
+  `CNFS_REDACTION_ADDITIONAL_FIELDS`, `config/cnfs_redaction.yml`, or
+  credentials) is unioned onto the defaults — the defaults are always retained.
+- Readers `sensitive_fields` (deduped symbols, matching `instrument(...)` payload
+  keys) and `sensitive_field?(name)`. Guards assert
+  `payload.keys & CnfsSupport::RedactionConfig.sensitive_fields == []`.
+
+This WS **defines** the surface only; **Plan 008 consumes** it in the enrichment
+guards. `spec/cnfs_support/redaction_config_spec.rb` proves defaults, predicate,
+merge-extension, dedup, and the intersection guard shape → 5 examples.
+`bundle exec rspec` → 36 examples, 0 failures. `bundle exec rubocop` → clean.
+
+**WS1 — family audit (recorded here for the gems with no change of their own).**
+Migrated: `iam`, `cnfs_cognito` (see their progress logs). Zero config:
+`chorus`, `okf`, `cnfs_dev`. Reviewed and deliberately **left as module
+accessors** (data-vs-slot test: none is a secret, an `ENV.fetch`, or a value the
+deploy env sets through the chain — all are structural/hot-path wiring):
+- `chatter#parent_controller` — class-name string constantized at eager-load,
+  set in a host initializer *before* controllers load (turbo-rails pattern);
+  lazy anyway_config would break that timing. Its `participant_candidates` is a
+  slot (callable).
+- `cnfs_tenanted#platform_table_prefixes` — structural allowlist tied to mounted
+  engines, on the platform-context security path (its `tenant_resolver`,
+  `tenant_not_found_handler`, `platform_console_guard` are slots).
+- `cnfs_telemetry#prefixes` — subscription wiring read once at `install!`,
+  extended via the `prefixes << "x"` mutate idiom.
+- `cnfs_support/logging#{levels,bridge_to_spans}` — foundation logging state read
+  on the per-log-line hot path; per the logging skill, per-tag levels and the
+  log↔trace bridge are the host-app's logging concern, not chain config
+  (`backend` is a slot). No secrets anywhere in these gems.

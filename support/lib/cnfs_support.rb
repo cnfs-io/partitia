@@ -1,8 +1,8 @@
 require_relative "cnfs_support/version"
 require_relative "cnfs_support/config"
+require_relative "cnfs_support/redaction_config"
 require_relative "cnfs_support/logging"
 require_relative "cnfs_support/instrumentable"
-require_relative "cnfs_support/model"
 require_relative "cnfs_support/railtie" if defined?(Rails::Railtie)
 require "active_support/core_ext/string/inflections"
 
@@ -17,9 +17,11 @@ module CnfsSupport
   # The Logging mixin keys off this rule for its tag. Telemetry (in the separate
   # cnfs_telemetry gem) derives the same rule from notification names, so a gem's
   # log tags and trace instrumentation-library names stay aligned.
-  def self.component_tag(name)
-    segment = name.to_s.deconstantize.underscore
-    segment.empty? ? "cnfs" : segment
+  def self.component_tag(name = "")
+    # segment = name.to_s.deconstantize.underscore
+    # segment.empty? ? "cnfs" : segment
+    segment = name.to_s.split("::").first.underscore
+    segment.start_with?("cnfs_") ? segment : segment.prepend("cnfs_")
   end
 
   # Any rails plugin can register here

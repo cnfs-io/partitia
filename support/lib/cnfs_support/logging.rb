@@ -118,6 +118,13 @@ module CnfsSupport
           bridge_span(message, level) if CnfsSupport::Logging.bridge_to_spans
           result
         end
+
+        # Level predicate (`info?`, `debug?`, …). Rails and other Logger-aware
+        # callers probe these before building an expensive message, and because
+        # this logger is now mixed onto every ApplicationController, the render
+        # path calls them every request. Answer from the per-tag level so the
+        # predicate matches what an actual emit at that level would do.
+        define_method("#{level}?") { enabled?(level) }
       end
 
       # True when a call at `level` clears the tag's configured floor.
