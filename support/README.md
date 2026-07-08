@@ -28,7 +28,7 @@ that here buys three things per-app config cannot:
   contract lives in what the gems depend on, so it can't be expressed as app
   config.
 - **One telemetry vocabulary.** Tag and tracer names derive from the gem's
-  namespace (`Okf::Button` → `okf`), so logs and traces line up under one
+  namespace (`Okf::Button` → `cnfs_okf`), so logs and traces line up under one
   identifier across every gem and every app — the difference between a readable
   cross-gem trace and a pile of anonymous spans.
 
@@ -140,7 +140,8 @@ end
 ```
 
 The logger is tagged from the first segment of the class's namespace, so every
-class under `Okf::` logs under the tag `okf`. Use the block form
+class under `Okf::` logs under the tag `cnfs_okf` (the first segment, cnfs-
+prefixed). Use the block form
 (`logger.debug { ... }`) for anything expensive — the block is skipped entirely
 when the level is disabled.
 
@@ -151,7 +152,7 @@ Set the backend and per-tag levels once, in an initializer:
 ```ruby
 CnfsSupport::Logging.backend = Rails.logger            # any Logger-like object
 CnfsSupport::Logging.levels[:default] = :warn          # floor for all tags
-CnfsSupport::Logging.levels["okf"]    = :debug         # louder for one gem
+CnfsSupport::Logging.levels["cnfs_okf"] = :debug       # louder for one gem
 CnfsSupport::Logging.levels["cnfs_tenanted"] = :info
 ```
 

@@ -17,6 +17,11 @@ RSpec.describe CnfsSupport::Logging do
       button = Okf::Button.new
       expect(button.logger).to be(Okf::Button.logger)
     end
+
+    it "falls back to the 'cnfs' tag for an anonymous (nameless) class" do
+      anon = Class.new { include CnfsSupport::Logging }
+      expect(anon.logger.tag).to eq("cnfs")
+    end
   end
 
   describe "per-tag levels" do

@@ -11,17 +11,19 @@ require "active_support/core_ext/string/inflections"
 # apps can depend on freely, in any environment.
 module CnfsSupport
   # Derive a component tag from a fully-qualified class/module name: the first
-  # `::`-split segment, downcased. `"Okf::Button"` => `"okf"`. Anonymous or
-  # nameless classes (name is nil/empty) fall back to `"cnfs"`.
+  # `::`-split segment, underscored and cnfs-prefixed. `"Okf::Button"` =>
+  # `"cnfs_okf"`; `"CnfsCognito::Session"` => `"cnfs_cognito"` (an already-prefixed
+  # segment is left as-is). Anonymous or nameless classes (name nil or empty) fall
+  # back to `"cnfs"`.
   #
   # The Logging mixin keys off this rule for its tag. Telemetry (in the separate
   # cnfs_telemetry gem) derives the same rule from notification names, so a gem's
   # log tags and trace instrumentation-library names stay aligned.
-  def self.component_tag(name = "")
-    # segment = name.to_s.deconstantize.underscore
-    # segment.empty? ? "cnfs" : segment
-    segment = name.to_s.split("::").first.underscore
-    segment.start_with?("cnfs_") ? segment : segment.prepend("cnfs_")
+  def self.component_tag(name)
+    segment = name.to_s.split("::").first&.underscore
+    return "cnfs" if segment.nil? || segment.empty?
+
+    segment.start_with?("cnfs_") ? segment : "cnfs_#{segment}"
   end
 
   # Any rails plugin can register here
