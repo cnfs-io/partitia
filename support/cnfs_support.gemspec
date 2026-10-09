@@ -33,6 +33,12 @@ Gem::Specification.new do |spec|
   # Provides the CnfsSupport::Config base class every CNFS gem derives its
   # config classes from (YAML -> credentials -> ENV resolution, typed attrs).
   spec.add_dependency "anyway_config", "~> 2.7"
+  # mixlib-shellout backs CnfsSupport::Shell — the one subprocess boundary every
+  # CNFS gem shells out through. A real, actively-maintained runtime dep on
+  # purpose: it owns the platform-specific process handling (unix.rb/windows.rb,
+  # FFI, child-process termination on timeout) we deliberately do NOT vendor. The
+  # thin adapter in lib/cnfs_support/shell.rb applies our conventions on top.
+  spec.add_dependency "mixlib-shellout", ">= 3.3"
   # Intentionally NO runtime dependency on Rails. The core value (the tenant
   # migration-path registry) is plain Ruby and must be usable pre-boot, before
   # Rails loads. The Railtie is defined only when Rails is already present

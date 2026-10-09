@@ -3,6 +3,8 @@ require_relative "cnfs_support/config"
 require_relative "cnfs_support/redaction_config"
 require_relative "cnfs_support/logging"
 require_relative "cnfs_support/instrumentable"
+require_relative "cnfs_support/shell"
+require_relative "cnfs_support/storable"
 require_relative "cnfs_support/railtie" if defined?(Rails::Railtie)
 require "active_support/core_ext/string/inflections"
 
@@ -30,6 +32,29 @@ module CnfsSupport
   # Any migrations or global migrations will be registered here
   def self.plugins
     @plugins ||= Set.new
+  end
+
+  # Yields Rails (the host app) followed by every registered plugin engine.
+  # The host is yielded FIRST so its paths take precedence in any ordered
+  # collection.
+  #
+  # THE single place the "Rails + plugins, with the Engine guard" walk is
+  # expressed. Every path-collection initializer (migrations, Tailwind sources,
+  # and whatever comes next) invokes this rather than re-implementing the loop —
+  # so a change to what counts as a plugin, or to the ordering, lands once.
+  #
+  # `Rails` itself is not an Engine (it is a module), which is why the guard
+  # applies only to members of `plugins`. Both respond to `.root`, which is all a
+  # collector needs.
+  def self.each_plugin
+    return enum_for(:each_plugin) unless block_given?
+
+    yield Rails
+    plugins.each do |plugin|
+      raise "#{plugin} must be a Rails Engine" unless plugin.is_a?(Class) && plugin < ::Rails::Engine
+
+      yield plugin
+    end
   end
 
   # There are two ways migrations paths are set
@@ -61,7 +86,44 @@ module CnfsSupport
       migrations_paths[key] ||= []
 
       path = plugin.root.join(search_path)
-      migrations_paths[key] << path.to_s if path.exist?
+      next unless path.exist?
+
+      path = path.to_s
+      migrations_paths[key] << path unless migrations_paths[key].include?(path)
+    end
+  end
+
+  # Directories within a plugin that Tailwind must scan for utility classes.
+  # NOTE: today OKF's Tailwind-classed markup lives under app/views (scaffold
+  # output). When a dedicated UI gem ships Phlex components they will live under
+  # app/components in THAT gem — which, being a registered plugin, contributes its
+  # own app/components automatically through this same list. So app/components is
+  # included here now even though OKF itself may not use it yet.
+  def self.source_paths_for
+    @source_paths_for ||= %w[app/views app/helpers app/components]
+  end
+
+  # Absolute paths to every registered plugin's Tailwind-scannable dirs.
+  # Consumed from a Tailwind entry CSS (application.css.erb):
+  #
+  #   <% CnfsSupport.source_paths.each do |path| %>
+  #   @source "<%= path %>";
+  #   <% end %>
+  #
+  # Absolute (not relative) by design: a relative `@source` must be counted from
+  # the entry file's location, which is brittle across engines — see the
+  # five-levels-up comment this replaces.
+  def self.source_paths
+    @source_paths ||= []
+  end
+
+  def self.set_source_paths_from(plugin)
+    source_paths_for.each do |dir|
+      path = plugin.root.join(dir)
+      next unless path.exist?
+
+      path = path.to_s
+      source_paths << path unless source_paths.include?(path)
     end
   end
 

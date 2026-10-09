@@ -1,12 +1,11 @@
 module CnfsSupport
   class Railtie < ::Rails::Railtie
-    initializer :set_migrations_paths do |app|
-      CnfsSupport.set_migrations_paths_from(Rails)
-      CnfsSupport.plugins.each do |plugin|
-        raise "#{plugin} must be a Rails Engine" unless plugin.is_a?(Class) && plugin < ::Rails::Engine
+    initializer :set_migrations_paths do
+      CnfsSupport.each_plugin { |plugin| CnfsSupport.set_migrations_paths_from(plugin) }
+    end
 
-        CnfsSupport.set_migrations_paths_from(plugin)
-      end
+    initializer :set_source_paths do
+      CnfsSupport.each_plugin { |plugin| CnfsSupport.set_source_paths_from(plugin) }
     end
 
     # Make `logger` + `instrument` universally available across the whole

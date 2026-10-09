@@ -130,3 +130,84 @@ deploy env sets through the chain — all are structural/hot-path wiring):
   on the per-log-line hot path; per the logging skill, per-tag levels and the
   log↔trace bridge are the host-app's logging concern, not chain config
   (`backend` is a slot). No secrets anywhere in these gems.
+
+---
+
+## CnfsSupport walker + source paths (PLAN-cnfs-support-walker-and-cleanup, Part A)
+
+**What shipped**
+
+- `CnfsSupport.each_plugin` — THE single Rails-first, Engine-guarded plugin walk.
+  Yields `Rails` (host) first so its paths win in any ordered collection, then
+  each registered plugin, raising unless it is a `Rails::Engine`. `enum_for`
+  guard so `each_plugin.map(&:root)` works block-less.
+- `set_migrations_paths_from` — added a duplicate guard (was appending
+  unconditionally; a double boot in one process doubled paths).
+- `source_paths_for` / `source_paths` / `set_source_paths_from` — new collection
+  of every plugin`\s Tailwind-scannable dirs (`app/views`, `app/helpers`,
+  `app/components`), ABSOLUTE by design, idempotent.
+- `railtie.rb` — `:set_migrations_paths` refactored onto `each_plugin`
+  (behavior-preserving; `|app|` dropped) plus a sibling `:set_source_paths`
+  initializer riding the same walker.
+
+**Decisions worth flagging**
+
+- The migrations initializer refactor is pure: the dummy still migrates
+  (`db:drop/create/migrate` → both migrations `up`, engine `Create okf schema`
+  among them), proving the walker matches the old inline loop.
+
+**How to run**
+
+```
+bundle exec rspec            # 46 examples (9 new across each_plugin/source_paths/migrations_paths specs)
+bin/rubocop lib spec/cnfs_support
+```
+
+---
+
+## Shell streaming — `CnfsSupport::Shell.stream` (plan 001) — shipped
+
+**What shipped**
+
+- `CnfsSupport::Shell.stream(*argv, cwd:, idle_timeout:, sensitive:, env:, &block)`
+  — a sibling to `run` for driving a long-running child that emits output
+  incrementally (a coding-agent CLI streaming NDJSON). Yields each stdout line
+  chomped **as it arrives**, accumulates full stdout on the Result, drains
+  stderr on its own thread (popen3 deadlock guard), and returns the same
+  normalized `Shell::Result`. Block is required (else ArgumentError — use `run`).
+- **popen3, not mixlib.** Deliberate, documented exception to "everything goes
+  through mixlib": mixlib gives no child handle (no INT/KILL), blocks until exit,
+  and only does wall-clock timeouts. The single-swap-point invariant is still
+  satisfied — one class, one gem.
+- **Idle timeout, not wall-clock** (`idle_timeout:`, default 300s). `IO.select` +
+  `read_nonblock` (buffer-free so select stays truthful); each read resets the
+  clock. A silent child is killed; a chatty long-running one is not.
+- **INT→KILL escalation** on both idle timeout and Ctrl+C. Interrupt marks the
+  Result `interrupted: true`, then re-raises so the program still stops — the
+  partial Result rides the re-raised exception (`rescue Interrupt => e; e.result`)
+  via a `StreamInterrupt` mixin.
+- **`Shell::Result` gained an `interrupted` member** (reads false when unset, so
+  `run`'s construction and its specs are untouched).
+- **Argv normalization extracted** to a shared private `normalize_argv` both
+  `run` and `stream` call, so the argv discipline can't drift.
+- Instrumentation `cnfs_support.shell.stream`: secret-free payload with `lines`
+  (count) + `interrupted`, never stdout/stderr; `sensitive:` redacts.
+
+**Decisions worth flagging**
+
+- **Process-group kill, not single-pid.** The child is spawned `pgroup: true` and
+  signalled at `-pid` (the whole group). An agent CLI spawns its own children; a
+  grandchild left alive keeps the stderr pipe open and the drain thread would
+  block until it exits. `terminate` INTs, waits the grace, then KILL-sweeps the
+  group unconditionally (leader may die on INT while a just-forked grandchild
+  lingers); an empty group yields ESRCH, rescued as benign. This closes a real
+  race the first cut had (interrupt test hung the full `sleep 5`).
+- No `stream!` variant — a streaming caller already holds the Result in a
+  block-structured flow.
+
+**How to run**
+
+```
+bundle exec rspec            # 76 examples (15 new in shell_spec.rb .stream)
+bin/rubocop lib spec/cnfs_support
+```
