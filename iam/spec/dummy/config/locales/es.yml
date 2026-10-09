@@ -1,0 +1,9 @@
+# Working Spanish translation example. Per chorus convention this lives in the
+# dummy app (a host), not in the engine — it demonstrates the host-override
+# pattern for iam.* strings. The engine ships only en.yml.
+es:
+  iam:
+    account:
+      default_name: "Cuenta"
+      errors:
+        undestroyable: "La cuenta es un singleton por inquilino y no se puede destruir"

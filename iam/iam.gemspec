@@ -23,6 +23,10 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 8.1.3"
+  # Encrypted attributes on IAM-owned models (credentials, tokens). The gem
+  # declares has_encrypted; the host app owns the master key (LockboxConfig
+  # + initializer), since Lockbox.master_key is process-global.
+  spec.add_dependency "lockbox", "~> 2.0"
   spec.add_dependency "turbo-rails"
   spec.add_dependency "stimulus-rails"
   spec.add_dependency "importmap-rails"

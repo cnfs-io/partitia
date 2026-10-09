@@ -14,8 +14,6 @@ gem "rubocop-rails-omakase", require: false
 
 # Start debugger with binding.b [https://github.com/ruby/debug]
 # gem "debug", ">= 1.0.0"
-gem "cnfs_support", path: "../cnfs_support"
-gem "cnfs_dev", path: "../cnfs_dev"
 
 group :development, :test do
   gem "factory_bot_rails"
@@ -28,3 +26,8 @@ group :development do
 end
 gem "amazing_print"
 gem "pry-rails"
+
+gem "cnfs_support", path: "../support"
+gem "cnfs_dev", path: "../dev"
+gem "cnfs_telemetry", path: "../telemetry"
+# gem "cnfs_tenanted", path: "../tenanted"
