@@ -1,0 +1,24 @@
+<% content_for :title, "Unknown workspace" %>
+
+<div class="md:w-2/3 w-full mx-auto py-16 text-center">
+  <h1 class="font-bold text-4xl mb-3">We couldn't find that workspace</h1>
+
+  <p class="text-lg text-gray-600 mb-8">
+    <% if @tenant_name.present? %>
+      There's no workspace at
+      <span class="font-medium text-gray-900"><%= @tenant_name %></span> yet.
+    <% else %>
+      That workspace doesn't exist yet.
+    <% end %>
+  </p>
+
+  <%#
+    Edit this page to point people at your real entry points. Eject it with:
+      bin/rails generate cnfs_tenanted:views tenant_not_found
+    The link below goes to the bare-domain registry; swap it for your signup
+    flow once you have one.
+  %>
+  <%= link_to "Go to the main site",
+        root_url(subdomain: false),
+        class: "rounded-md px-3.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white inline-block font-medium" %>
+</div>

@@ -7,6 +7,11 @@ module CnfsTenanted
   # To customize, the host overrides actions in its subclass (calling super or
   # replacing) and/or ejects the views with the eject generator.
   class TenantsController < ::ApplicationController
+    # The seed of the platform console (ADR 0003 §7): the tenant registry CRUD
+    # is a platform-plane operation, so every action runs behind the platform
+    # console guard. The guard is a host-configured callable run in controller
+    # context; it defaults to DENY, so an unconfigured console is a closed one.
+    before_action :guard_platform_console
     before_action :set_tenant, only: %i[ show edit update destroy ]
 
     def index
@@ -65,7 +70,15 @@ module CnfsTenanted
     end
 
     def tenant_params
-      params.expect(tenant: [ :name, :subdomain ])
+      params.expect(tenant: [ :name, :subdomain, :owner_email ])
+    end
+
+    # Run the configured platform console guard in this controller's context so
+    # it can redirect_to/render/head as it decides. Rendering or redirecting
+    # halts the action; doing nothing lets it proceed. The default guard denies
+    # with 403 (see CnfsTenanted::DEFAULT_CONSOLE_GUARD).
+    def guard_platform_console
+      instance_exec(&CnfsTenanted.platform_console_guard)
     end
   end
 end

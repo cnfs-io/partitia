@@ -12,7 +12,8 @@ It provides:
 - subdomain → tenant request resolution;
 - Tailwind-styled MVC for both, rendered straight from the gem and ejectable into your app when you want to customize;
 - a tenant-aware migration status rake task;
-- engine migration-path registration so each tenant database is migrated correctly.
+- a per-database migration-path setup (conventional copy-in by default, with an
+  opt-in to read migrations in place from the gems).
 
 ---
 
@@ -24,7 +25,7 @@ Read this before installing — the installer is invasive.
   SQLite model. It is intended for **new apps**, or apps not yet committed to a
   database layout.
 - **The installer rewrites `config/database.yml`.** It replaces your database
-  config with a two-database (tenanted `primary` + plain `global`) layout. If
+  config with a two-database (tenanted `tenant` + plain `global`) layout. If
   you have an existing, customized `database.yml`, back it up first.
 - **A brief "won't boot" window during install.** Because install rewrites
   `database.yml` and adds a tenanted connection, the app is not expected to boot
@@ -60,14 +61,11 @@ bin/rails generate cnfs_tenanted:install
 
 This wires your app for multi-tenancy. Specifically, it:
 
-- adds `require "cnfs_support/tenant_migrations"` to `config/application.rb`
-  **before** `Bundler.require` (engines register their tenant migration paths
-  there, and `database.yml` reads them);
 - calls `tenanted` in `app/models/application_record.rb` (every
   `ApplicationRecord` model becomes tenant-scoped);
 - includes `CnfsTenanted::TenantResolution` in your `ApplicationController`
   (resolves the tenant from the request subdomain);
-- rewrites `config/database.yml` (tenanted `primary` + plain `global` DB);
+- rewrites `config/database.yml` (tenanted `tenant` + plain `global` DB);
 - sets `config.action_dispatch.tld_length = 0` in development so
   `*.localhost` subdomains resolve;
 - creates thin host controllers
@@ -156,21 +154,24 @@ the admin manages the `Tenant`, the tenant manages their `Account`.
 If `cnfs_dev` is loaded, the console gains:
 
 ```ruby
-vcd "acme"   # switch the console into the acme tenant's database context
-vcd          # clear back to the global/untenanted context
+vst "acme"   # switch the console into the acme tenant's database context
+vst          # clear back to the global/untenanted context
 
 t            # => Tenant ;   ta / tc / tf / tl  (all / create / find / last)
 a            # => Account ;  aa / ac / af / al
 ```
 
+The prompt also gains a current-tenant segment while a tenant context is
+active, e.g. `[development][acme] cnfs(main)>`.
+
 ### Tenant migration status
 
-activerecord-tenanted ships `db:migrate:primary` but no status task. This gem
+activerecord-tenanted ships `db:migrate:tenant` but no status task. This gem
 adds one that works even when a tenant has pending migrations:
 
 ```bash
-ARTENANT=acme bin/rails db:migrate:status_primary   # one tenant
-bin/rails db:migrate:status_all                      # every tenant
+ARTENANT=acme bin/rails db:migrate:status:tenant   # one tenant
+bin/rails db:migrate:status:tenant                 # every tenant
 ```
 
 ---
@@ -211,7 +212,7 @@ that resource.
 
 ---
 
-## Migrations: how they work (and the in-place opt-in)
+## Migrations: how they work
 
 The gem ships two kinds of migration:
 
@@ -221,52 +222,51 @@ The gem ships two kinds of migration:
   other engines add) — runs against each per-tenant database as it is
   provisioned.
 
-### Default: copy-in
+There are two ways to source them, chosen per database in `config/database.yml`.
+The installed file **defaults to copy-in** and carries the in-place alternative
+commented out beside each database.
 
-By default the installer **copies** both migrations into your app
-(`db/global_migrate/` and `db/migrate/`). Your app owns them — they're ordinary
-migrations in your repo, versioned with your schema, independent of the gem
-version. This is the conventional, stable choice and needs no extra setup.
+### Default: copy-in (conventional Rails)
 
-### Opt-in: in-place (single source of truth)
+Each database points at a normal path in your app (`db/migrate`,
+`db/global_migrate`), so **your app owns its migrations**. Pull the gems'
+migrations in the standard Rails way, then version them like any others:
 
-During rapid co-development across multiple apps, you may prefer engines'
-migrations to be **read directly from the gems** rather than copied — one source
-of truth, so a migration change in the gem propagates on `bundle update` without
-re-copying into every app.
-
-To opt in, require the registry **above `Bundler.require`** in
-`config/application.rb`:
-
-```ruby
-# config/application.rb
-require_relative "boot"
-
-require "cnfs_support/engine_migration_paths"   # <-- add this, before Bundler.require
-
-# ...
-Bundler.require(*Rails.groups)
+```bash
+bin/rails cnfs_tenanted:install:migrations          # TENANT migrations (db/migrate)
+bin/rails railties:install:migrations               # every mounted engine's tenant migrations
+bin/rails cnfs_tenanted:install:global_migrations   # GLOBAL migrations (db/global_migrate)
 ```
 
-That single require flips the behavior: each engine appends its migration paths
-to the registry as it loads, and `config/database.yml` feeds those paths to the
-correct database (tenant paths to the tenanted `primary`, global paths to
-`global`). It must be a plain `require` placed before `Bundler.require`, because
-Rails evaluates `database.yml` before initializers — a config setting would be
-read too late.
+The first two are Rails' own engine-migration tasks; they only see the standard
+`db/migrate` path, so they copy the **tenant** migrations. The **global**
+migrations live under the non-standard `db/global_migrate` scope that Rails
+doesn't know about, so `cnfs_tenanted:install:global_migrations` fills that gap
+— it copies the global migrations of *every* registered CNFS engine into
+`db/global_migrate` in one run. All three are idempotent (re-running skips
+migrations already copied).
 
-When you opt into in-place, you can delete the migration copies the installer
-put in `db/migrate` and `db/global_migrate` (the gem provides them).
+Nothing about this is otherwise cnfs-specific — it's the ordinary
+engine-migration workflow, and it's the stable choice for released apps.
 
-> **Rule for in-place tenant migrations: treat shipped tenant migrations as
-> append-only and immutable across gem versions.** Because tenant databases are
-> provisioned continuously and read migrations from the gem in place, editing an
+### Opt-in: in-place (read straight from the gems)
+
+Uncomment the `CnfsSupport.migrations_paths[...]` line under a database (and
+comment its hardcoded path) to have that database read migrations directly from
+the gems — nothing copied. Each gem's paths are collected into
+`CnfsSupport.migrations_paths` at boot, keyed by scope (`:tenant` → `db/migrate`,
+`:global` → `db/global_migrate`, declared by `cnfs_tenanted`'s engine). A
+migration added to any CNFS gem is then picked up on `bundle update` with no
+re-copy, across every CNFS engine that ships migrations (e.g. `cnfs_okf`) at
+once. Useful during rapid co-development across several gems and apps.
+
+The presence of that ERB is the whole switch — there is no separate config flag.
+
+> **In in-place mode, treat shipped tenant migrations as append-only and
+> immutable across gem versions.** Because tenant databases are provisioned
+> continuously and read migrations from the gem in place, editing an
 > already-released tenant migration can put existing tenant databases out of
 > sync with new ones. Add new migrations; never alter shipped ones.
-
-> Other CNFS engines that ship tenant migrations (e.g. `cnfs_okf`) register with
-> the same `cnfs_support/engine_migration_paths` registry, so the single opt-in
-> require covers all of them at once.
 
 ---
 

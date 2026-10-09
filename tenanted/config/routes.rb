@@ -1,19 +1,12 @@
 Rails.application.routes.draw do
-  # Tenant subdomain present -> that tenant's Account settings (the singleton).
-  # Declared FIRST: Rails matches top-down and the subdomain constraints make
-  # these two root declarations mutually exclusive.
-  constraints(subdomain: /.+/) do
-    root "accounts#show", as: :tenant_root
-  end
+  # The "unknown workspace" landing page. Outside the subdomain constraints
+  # because the visitor is sitting on the unknown subdomain when the not-found
+  # seam redirects them here. The TenantResolution concern points at this by
+  # default (tenant_unknown_path / _url).
+  get "tenant-unknown", to: "tenant_not_found#unknown", as: :tenant_unknown
 
-  # The tenant's self-service settings singleton (subdomain surface).
-  resource :account, only: %i[ show edit update ]
-
-  # Bare domain (no tenant subdomain) -> the global tenant registry list.
-  constraints(subdomain: "") do
-    root "tenants#index", as: :global_root
-  end
-
-  # Global-admin tenant registry CRUD (bare-domain surface).
+  # Global-admin tenant registry CRUD (bare-domain surface). The host owns the
+  # root routes on both planes (ADR 0003 §6); the gem contributes only the
+  # tenant registry and the not-found seam.
   resources :tenants
 end

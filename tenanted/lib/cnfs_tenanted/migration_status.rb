@@ -10,15 +10,15 @@ module CnfsTenanted
   module MigrationStatus
     module_function
 
-    # The tenanted base config for the current environment's :primary database.
-    def primary_base_config
+    # The tenanted base config for the current environment's :tenant database.
+    def tenant_base_config
       ActiveRecord::Base.configurations
-        .configs_for(env_name: Rails.env, name: "primary", include_hidden: true)
+        .configs_for(env_name: Rails.env, name: "tenant", include_hidden: true)
     end
 
     # Tenant names, derived from the tenant database files on disk.
     def tenant_names
-      cfg  = primary_base_config
+      cfg  = tenant_base_config
       tmpl = cfg.configuration_hash[:database] # e.g. "storage/tenants/%{tenant}.sqlite3"
 
       glob_pattern  = tmpl.sub("%{tenant}", "*")
@@ -34,14 +34,14 @@ module CnfsTenanted
     # Open a temporary, unmanaged connection pool against ONE tenant's database
     # file and print its migration status. Pending migrations show as "down".
     def print(tenant)
-      cfg       = primary_base_config
+      cfg       = tenant_base_config
       hash      = cfg.configuration_hash.dup
       db_path   = hash[:database].sub("%{tenant}", tenant)
-      mig_paths = Array(hash[:migrations_paths]).presence || ["db/migrate"]
+      mig_paths = Array(hash[:migrations_paths]).presence || [ "db/migrate" ]
 
       tenant_hash = hash.merge(database: db_path, migrations_paths: mig_paths)
       db_config = ActiveRecord::DatabaseConfigurations::HashConfig.new(
-        Rails.env.to_s, "primary_status_#{tenant}", tenant_hash
+        Rails.env.to_s, "tenant_status_#{tenant}", tenant_hash
       )
 
       puts
