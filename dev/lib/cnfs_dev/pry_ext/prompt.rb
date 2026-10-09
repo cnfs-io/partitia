@@ -14,7 +14,8 @@ module CnfsDev
     module Prompt
       module_function
 
-      # Named colors -> ANSI SGR codes. Callers use the names; see Builder.
+      # Named colors -> ANSI SGR codes. Callers use the names; see
+      # CnfsDev::Builder#prompt_segment.
       COLORS = {
         red: 31, green: 32, yellow: 33, blue: 34,
         magenta: 35, cyan: 36, grey: 90, gray: 90

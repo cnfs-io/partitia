@@ -1,25 +1,19 @@
 require_relative "cnfs_dev/version"
-require_relative "cnfs_dev/railtie"
+require_relative "cnfs_dev/builder"
+require_relative "cnfs_dev/railtie" if defined?(Rails::Railtie)
+require "pry-byebug"
 
 module CnfsDev
-  # Console/Pry integration is loaded lazily by the Railtie's `console` block;
-  # see lib/cnfs_dev/pry_ext.rb. The Railtie itself is only defined when
-  # Rails is present (see railtie.rb), so requiring this gem outside Rails is
-  # safe.
-  #
-  # ----------------------------------------------------------------------------
-  # Public facade for consuming gems
-  # ----------------------------------------------------------------------------
-  #
   # cnfs_dev encapsulates Pry's verbose internals (when_started hooks,
   # TOPLEVEL_BINDING, ANSI color escapes) so other gems can contribute console
-  # ergonomics declaratively. A consuming gem (which loads after cnfs_dev) does:
+  # ergonomics declaratively. A consuming gem (which loads after cnfs_dev) does,
+  # in its entry file at load time:
   #
   #   return unless defined?(CnfsDev)
   #
   #   CnfsDev.console do |c|
-  #     c.shortcuts "t", Tenant          # => t, ta, tc, tf, tl
-  #     c.shortcuts "a", Account         # => a, aa, ac, af, al
+  #     c.namespace CnfsOkf, "o"         # CnfsOkf::Bundle => ob, oba, obc, obf, obl, obp
+  #     c.namespace Chorus,  "c"         # Chorus::Account => ca, ...
   #
   #     c.command(:vst) { |name = ""| ApplicationRecord.current_tenant = name }
   #
@@ -33,13 +27,39 @@ module CnfsDev
   #   end
   #
   # No Pry knowledge required: no hooks, no main binding, no escape codes. The
-  # block may be called by any number of gems; each call appends. Contributions
-  # are collected now and applied to `main` in a single console hook at session
-  # start (see CnfsDev::PryExt), so registration order == gem load order and
-  # there is exactly one place that touches the console object.
-  def self.console(&block)
-    raise ArgumentError, "CnfsDev.console requires a block" unless block
+  # Builder DSL yielded by `console` lives in lib/cnfs_dev/builder.rb.
+  #
+  # ----------------------------------------------------------------------------
+  # Registries
+  # ----------------------------------------------------------------------------
+  #
+  # These are plain, dependency-free module-level stores — the same shape as
+  # CnfsSupport.plugins. They exist the moment this file is required, so a
+  # consuming gem can register at *load* time, which is earlier than the
+  # Railtie's `console` block that loads the (Pry-dependent) wiring. Nothing
+  # here touches Pry, Rails, or ActiveRecord, so populating them is safe in any
+  # process. The heavier machinery in lib/cnfs_dev/pry_ext.rb reads these later,
+  # only when a console session starts.
+  def self.namespaces     = (@namespaces     ||= [])
+  def self.models         = (@models         ||= [])
+  def self.commands       = (@commands       ||= [])
+  def self.prompt_segments = (@prompt_segments ||= [])
+  def self.before_resets  = (@before_resets  ||= [])
+  def self.reset_tasks    = (@reset_tasks    ||= [])
 
-    PryExt::Builder.collect(&block)
+  # ----------------------------------------------------------------------------
+  # Public facade for consuming gems
+  # ----------------------------------------------------------------------------
+  #
+  # Yields a Builder (see lib/cnfs_dev/builder.rb) that appends into the
+  # registries above. The block may be called by any number of gems; each call
+  # appends, so registration order == gem load order. Contributions are applied
+  # to the console `main` in a single hook at session start (see
+  # CnfsDev::PryExt), the one place that touches the console object.
+  def self.console
+    raise ArgumentError, "CnfsDev.console requires a block" unless block_given?
+
+    yield Builder.new
+    nil
   end
 end

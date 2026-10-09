@@ -1,6 +1,6 @@
 require_relative "pry_ext/console_methods"
 require_relative "pry_ext/prompt"
-require_relative "pry_ext/builder"
+require_relative "pry_ext/shortcut_planner"
 
 module CnfsDev
   # Entry point for the gem's Pry/console integration. Call
@@ -12,11 +12,11 @@ module CnfsDev
   #
   # Design: there is exactly ONE place that touches the console `main` object —
   # the single :when_started hook installed here. Everything a consuming gem
-  # contributes via CnfsDev.console (model shortcuts, bare commands) is drained
-  # from the Builder registries inside that one hook, so registration order is
-  # just gem load order and no gem needs its own Pry hook or defensive
-  # re-extend. Prompt segments are independent of `main` and are installed at
-  # setup time.
+  # contributes via CnfsDev.console (model namespaces, bare commands, reset
+  # hooks) is drained from the CnfsDev registries inside that one hook, so
+  # registration order is just gem load order and no gem needs its own Pry hook
+  # or defensive re-extend. Prompt segments are independent of `main` and are
+  # installed at setup time.
   module PryExt
     module_function
 
@@ -24,7 +24,10 @@ module CnfsDev
       return unless defined?(Pry)
 
       install_step_aliases if defined?(PryByebug)
-      Prompt.install! if defined?(Rails)
+      if defined?(Rails)
+        drain_prompt_segments
+        Prompt.install!
+      end
       install_console_hook
     end
 
@@ -36,27 +39,42 @@ module CnfsDev
       Pry.commands.alias_command "f", "finish"
     end
 
+    # Register each contributed prompt segment (stored as inert { color:, body: }
+    # data on CnfsDev.prompt_segments) with the Prompt module, which owns the
+    # ANSI/Readline handling. Done here, at console setup, so the DSL that
+    # collected them never had to touch Prompt/Pry.
+    def drain_prompt_segments
+      CnfsDev.prompt_segments.each do |seg|
+        Prompt.register_segment(color: seg[:color], &seg[:body])
+      end
+    end
+
     # The single hook that wires the live console `main`: mix in the console
-    # methods, then drain the Builder registries (shortcuts + bare commands)
-    # contributed by cnfs_dev itself and any consuming gem.
+    # methods, then drain the CnfsDev registries (namespaces + bare commands +
+    # reset hooks) contributed by cnfs_dev itself and any consuming gem.
     def install_console_hook
       Pry.config.hooks.add_hook(:when_started, :cnfs_console) do |_target, _options, _pry_instance|
         main = TOPLEVEL_BINDING.receiver
         main.extend(ConsoleMethods) unless main.is_a?(ConsoleMethods)
+        main.install_reload_memo_clear! if defined?(Rails)
 
-        Builder.shortcuts.each do |s|
+        # Models must be loaded before the planner can enumerate namespace
+        # descendants; the dev console does not eager-load by default.
+        Rails.application.eager_load! if defined?(Rails) && Rails.respond_to?(:application)
+
+        ShortcutPlanner.plan(CnfsDev.namespaces, models: CnfsDev.models).each do |s|
           main.def_model_shortcuts(s[:prefix], s[:klass])
         end
 
-        Builder.commands.each do |cmd|
+        CnfsDev.commands.each do |cmd|
           main.define_singleton_method(cmd[:name], &cmd[:body])
         end
 
-        Builder.before_resets.each do |body|
+        CnfsDev.before_resets.each do |body|
           main.before_project_reset(&body)
         end
 
-        Builder.reset_tasks.each do |task_name|
+        CnfsDev.reset_tasks.each do |task_name|
           main.project_reset_tasks << task_name
         end
       end

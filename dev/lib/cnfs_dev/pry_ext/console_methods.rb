@@ -8,8 +8,12 @@ module CnfsDev
     # binding with it (see CnfsDev::Railtie), which keeps them out of the
     # global Object namespace while preserving the same prompt ergonomics:
     #
-    #   def_model_shortcuts "b", Okf::Bundle
-    #   bf 3   # => Okf::Bundle.find(3), memoized for repeat calls
+    #   def_model_shortcuts "ob", Okf::Bundle
+    #   obf 3   # => Okf::Bundle.find(3), memoized for repeat calls
+    #
+    # Prefixes come from ShortcutPlanner (namespace letter + model code), so
+    # they are always at least two characters and never collide with common
+    # single-letter scratch variables.
     #
     # Everything here is guarded so it stays inert outside a Rails app.
     module ConsoleMethods
@@ -18,13 +22,16 @@ module CnfsDev
         reload! if defined?(reload!)
       end
 
+      def log!
+        ActiveRecord::Base.logger = ActiveRecord::Base.logger.nil? ? Rails.logger : nil
+        log
+      end
+
+      def log = "Rails logger #{ActiveRecord::Base.logger.nil? ? "OFF" : "ON"}"
+
       # Define a family of console shortcuts for a model class.
       #
-      #   def_model_shortcuts "ob", Okf::Bundle  # => oba, obc, obf, obl
-      #   def_model_shortcuts "b",  Okf::Bundle  # => vb, vba, vbc, vbf, vbl
-      #
-      # Single-character prefixes are prefixed with "v" to avoid clobbering
-      # common scratch variable names (a, b, c...).
+      #   def_model_shortcuts "ob", Okf::Bundle  # => ob, oba, obc, obf, obl, obp
       #
       #   <prefix>    => the class itself
       #   <prefix>a   => .all (never memoized)
@@ -32,15 +39,18 @@ module CnfsDev
       #                  <prefix>l memo so the next <prefix>l returns the new row
       #   <prefix>f   => .find(id) (or .first when no id); memoized per id
       #   <prefix>l   => .last; memoized
+      #   <prefix>p   => .all.pluck(*args); same signature as pluck
+      #                  (e.g. obp :name, :age => Okf::Bundle.all.pluck(:name, :age))
       #
       # The memoized readers (<prefix>f, <prefix>l) return the same object on
       # repeat calls with no query. Append "!" to force a refresh (<prefix>f!,
-      # <prefix>l!), and use `uv` to clear memos.
+      # <prefix>l!), and use `clear!` to clear memos.
       def def_model_shortcuts(prefix, klass)
-        prefix = "v#{prefix}" if prefix.length == 1
+        register_shortcut(prefix, klass)
 
         define_console_method(prefix) { klass }
         define_console_method("#{prefix}a") { klass.all }
+        define_console_method("#{prefix}p") { |*args| klass.all.pluck(*args) }
 
         define_console_method("#{prefix}c") do |attributes = {}|
           record = klass.create(attributes)
@@ -52,11 +62,45 @@ module CnfsDev
         define_memoized_console_method("#{prefix}l") { klass.last }
       end
 
-      # Clear memoized shortcut records. `uv` clears everything; `uv :vtf`
+      # List the registered model shortcut families, optionally filtered to
+      # those whose prefix starts with `match`:
+      #
+      #   shortcuts        # => every family
+      #   shortcuts "c"    # => families whose prefix starts with "c"
+      #   shortcuts "ca"   # => families whose prefix starts with "ca"
+      #
+      # Returns a Hash of prefix => class, and prints an aligned table.
+      def shortcuts(match = nil)
+        pairs = shortcut_registry.select { |prefix, _| match.nil? || prefix.start_with?(match.to_s) }
+                                 .sort_by { |prefix, _| prefix }
+
+        width = pairs.map { |prefix, _| prefix.length }.max || 0
+        pairs.each { |prefix, klass| puts "#{prefix.ljust(width)}  #{klass}" }
+
+        nil
+      end
+
+      # Clear memoized shortcut records. `clear!` clears everything; `clear! :obf`
       # clears the memos for one shortcut family.
-      def uv(name = nil)
+      def clear!(name = nil)
         name ? shortcut_memo.delete_if { |k, _| k.first == name.to_sym } : shortcut_memo.clear
         nil
+      end
+
+      # Wrap the console's `reload!` so reloading application code also clears
+      # every memo — the reloaded classes make cached instances stale. Prepends
+      # onto the singleton so `super` reaches the real reload! regardless of how
+      # Rails defined it. Idempotent; only meaningful in a Rails console.
+      def install_reload_memo_clear!
+        return if @reload_memo_clear_installed
+
+        @reload_memo_clear_installed = true
+        singleton_class.prepend(Module.new do
+          def reload!(*)
+            shortcut_memo.clear
+            super
+          end
+        end)
       end
 
       # --- Project reset machinery ----------------------------------------
@@ -117,6 +161,16 @@ module CnfsDev
       end
 
       private
+
+      # Registry of defined shortcut families: prefix => model class. Populated
+      # by def_model_shortcuts, read by `shortcuts`. Lives on `main`.
+      def shortcut_registry
+        @shortcut_registry ||= {}
+      end
+
+      def register_shortcut(prefix, klass)
+        shortcut_registry[prefix] = klass
+      end
 
       # Per-session store for memoized shortcut records, keyed by
       # [shortcut_name, *args]. Lives on the console `main` object.
