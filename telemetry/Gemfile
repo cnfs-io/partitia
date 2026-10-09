@@ -16,6 +16,10 @@ gem "rubocop-rails-omakase", require: false
 group :development, :test do
   gem "factory_bot_rails"
   gem "rspec-rails"
+
+  # SDK + in-memory exporter, present in the suite ONLY, to prove spans actually
+  # emit when a host opts in. The gem itself never depends on the SDK.
+  gem "opentelemetry-sdk"
 end
 
 group :development do
