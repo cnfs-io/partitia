@@ -23,4 +23,7 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 8.1.3"
+  # OIDC/JWT verification (ID-token signature, iss/aud/exp/nonce). Do not
+  # hand-roll JWT/JWKS validation (Plan 003 WS2).
+  spec.add_dependency "jwt"
 end

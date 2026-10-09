@@ -12,12 +12,18 @@ gem "rubocop-rails-omakase", require: false
 
 # Start debugger with binding.b [https://github.com/ruby/debug]
 # gem "debug", ">= 1.0.0"
-gem "cnfs_support", path: "../cnfs_support"
-gem "cnfs_dev", path: "../cnfs_dev"
+gem "cnfs_support", path: "../support"
+gem "cnfs_dev", path: "../dev"
 
 group :development, :test do
   gem "factory_bot_rails"
   gem "rspec-rails"
+end
+
+group :test do
+  # Stub the IdP HTTP surface (discovery, JWKS, token endpoint) so the suite
+  # runs with no container and no network (Plan 003 WS5).
+  gem "webmock"
 end
 
 group :development do

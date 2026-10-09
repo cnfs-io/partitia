@@ -1,0 +1,10 @@
+en:
+  cnfs_cognito:
+    sessions:
+      failures:
+        default: "Sign-in could not be completed. Please try again."
+        invalid_state: "Your sign-in session expired or was invalid. Please try again."
+        verification_failed: "We couldn't verify the sign-in response. Please try again."
+        unknown_identity: "This account isn't recognized. Ask an administrator for an invite."
+        invalid_link_token: "That invite link is invalid or has expired."
+        invalid_policy: "Sign-in is not permitted here."

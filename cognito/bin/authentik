@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Authentik dev harness for cnfs_cognito. DEV ONLY — the test suite never needs
+# it. Idempotent: up | down | status | logs | reset.
+set -euo pipefail
+
+COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../spec/dummy/docker/authentik" && pwd)"
+COMPOSE_FILE="$COMPOSE_DIR/compose.yaml"
+ENV_FILE="$COMPOSE_DIR/.env"
+PORT="${AUTHENTIK_PORT:-9000}"
+HEALTH_URL="http://localhost:${PORT}/-/health/ready/"
+
+compose() {
+  docker compose --project-name cnfs-authentik --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
+
+require_docker() {
+  if ! docker info >/dev/null 2>&1; then
+    echo "Docker isn't running (or isn't installed). Start Docker and retry." >&2
+    exit 1
+  fi
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "Missing $ENV_FILE — copy .env.example to .env and fill in secrets." >&2
+    exit 1
+  fi
+}
+
+wait_healthy() {
+  echo "Waiting for Authentik at ${HEALTH_URL} ..."
+  for _ in $(seq 1 60); do
+    if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
+      echo "Authentik is healthy."
+      return 0
+    fi
+    sleep 5
+  done
+  echo "Timed out waiting for Authentik to become healthy. Check: bin/authentik logs" >&2
+  return 1
+}
+
+case "${1:-up}" in
+  up)
+    require_docker
+    compose up -d
+    wait_healthy
+    compose logs -f          # foreground so Foreman can supervise it
+    ;;
+  down)   require_docker; compose down ;;
+  status) require_docker; compose ps ;;
+  logs)   require_docker; compose logs -f ;;
+  reset)  require_docker; compose down -v; echo "Removed Authentik containers and volumes." ;;
+  *)      echo "usage: bin/authentik {up|down|status|logs|reset}" >&2; exit 1 ;;
+esac

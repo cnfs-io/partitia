@@ -1,0 +1,5 @@
+require "cnfs_cognito/providers/base"
+require "cnfs_cognito/pkce"
+require "cnfs_cognito/providers/registry"
+require "cnfs_cognito/providers/oidc"
+require "cnfs_cognito/providers/authentik"
