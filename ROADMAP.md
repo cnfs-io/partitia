@@ -180,7 +180,7 @@ Later (longer term):
       local providers have been tested; check the DSN lands in the vault, fnox exports
       `PARTITIA_TELEMETRY_ERROR_DSN` in the app dir, and `pt server` picks it up
 - [ ] **What partitia needs from `anfs space setup` / `wsm setup`** (upcoming in anfs; filed as
-      input, see below). For a space whose apps use `PARTITIA_SECRETS_STORE=fnox`:
+      input, anfs r-20261022-4). For a space whose apps use `PARTITIA_SECRETS_STORE=fnox`:
       - a `fnox.toml` at the space root defining a 1Password provider authenticated by the
         space's service-account token (`OP_SERVICE_ACCOUNT_TOKEN`), with a known provider
         name `pt` can target (`PARTITIA_FNOX_PROVIDER`) and a vault per space
