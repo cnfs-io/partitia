@@ -1,0 +1,20 @@
+en:
+  iam:
+    account:
+      default_name: "Account"
+      errors:
+        undestroyable: "Account is a per-tenant singleton and cannot be destroyed"
+    principal:
+      errors:
+        duplicate_root: "there is already a root principal in this database"
+        root_not_demotable: "cannot be demoted once set"
+        root_undestroyable: "the root principal cannot be destroyed"
+        machine_cannot_be_root: "a machine principal cannot be root"
+    credential:
+      errors:
+        root_owner: "the root principal cannot hold access keys"
+    identity_link:
+      errors:
+        not_human: "must be a human principal"
+    authentication:
+      required: "authentication required"
