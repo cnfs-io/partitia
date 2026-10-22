@@ -175,3 +175,18 @@ Later (longer term):
 - [ ] appwork: its gems still use the old names (`CnfsSupport`, `cnfs_*` gems, `Iam::`, `iam_`
       tables), about 45 files across chatter, chorus, gtd, micro_manager and okf
 - [ ] `~/.config/rails/templates/cnfs.rb`: old gem and generator names (D5 rewrites it)
+- [ ] **Manual test (the person):** `PARTITIA_SECRETS_STORE=fnox pt services` against the real
+      1Password vault through the space's service-account token. Only `fnox set --dry-run` and
+      local providers have been tested; check the DSN lands in the vault, fnox exports
+      `PARTITIA_TELEMETRY_ERROR_DSN` in the app dir, and `pt server` picks it up
+- [ ] **What partitia needs from `anfs space setup` / `wsm setup`** (upcoming in anfs; filed as
+      input, see below). For a space whose apps use `PARTITIA_SECRETS_STORE=fnox`:
+      - a `fnox.toml` at the space root defining a 1Password provider authenticated by the
+        space's service-account token (`OP_SERVICE_ACCOUNT_TOKEN`), with a known provider
+        name `pt` can target (`PARTITIA_FNOX_PROVIDER`) and a vault per space
+      - app dirs below it inherit that provider: an app's own `fnox.toml` (written by
+        `fnox set` from `pt services`) holds only its keys
+      - fnox's shell activation on cd, so `bin/rails c`, runners and jobs see the secrets, not
+        only `pt server` (which wraps `fnox exec`)
+      - non-interactive operation: with the token set, no 1Password unlock prompt, so agents
+        can work in the space
