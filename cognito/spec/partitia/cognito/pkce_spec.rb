@@ -2,7 +2,7 @@ require "rails_helper"
 require "base64"
 require "digest"
 
-RSpec.describe CnfsCognito::Pkce do
+RSpec.describe Partitia::Cognito::Pkce do
   it "produces a URL-safe, unpadded S256 challenge for a verifier" do
     verifier = described_class.verifier
     challenge = described_class.challenge(verifier)

@@ -67,11 +67,11 @@ module OidcHelpers
   end
 
   def oidc_provider(issuer: ISSUER, client_id: CLIENT_ID)
-    CnfsCognito::Providers::Oidc.new(issuer: issuer, client_id: client_id, client_secret: "secret")
+    Partitia::Cognito::Providers::Oidc.new(issuer: issuer, client_id: client_id, client_secret: "secret")
   end
 end
 
-# A stand-in for Iam::Resolution's result, wired into the identity_resolver slot.
+# A stand-in for Partitia::Iam::Resolution's result, wired into the identity_resolver slot.
 FakePrincipal = Struct.new(:id)
 FakeResult = Struct.new(:ok, :principal, :failure_reason) do
   def success?

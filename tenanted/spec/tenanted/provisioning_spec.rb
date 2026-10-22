@@ -4,7 +4,7 @@ require "rails_helper"
 RSpec.describe "tenant provisioning" do
   it "runs a registered hook inside the new tenant's DB context with the Tenant as context" do
     seen = {}
-    CnfsTenanted.after_provision << ->(context) do
+    Partitia::Tenanted.after_provision << ->(context) do
       seen[:current_tenant] = ApplicationRecord.current_tenant
       seen[:name] = context.name
       seen[:owner_email] = context.owner_email
@@ -23,8 +23,8 @@ RSpec.describe "tenant provisioning" do
 
   it "runs hooks in registration order" do
     order = []
-    CnfsTenanted.after_provision << ->(_) { order << :first }
-    CnfsTenanted.after_provision << ->(_) { order << :second }
+    Partitia::Tenanted.after_provision << ->(_) { order << :first }
+    Partitia::Tenanted.after_provision << ->(_) { order << :second }
 
     create_tenant!(subdomain: "acme")
 
@@ -32,19 +32,19 @@ RSpec.describe "tenant provisioning" do
   end
 
   it "rolls back the Tenant and drops the tenant DB when a hook raises" do
-    CnfsTenanted.after_provision << ->(_) { raise "seeding failed" }
+    Partitia::Tenanted.after_provision << ->(_) { raise "seeding failed" }
     tenants_before = ApplicationRecord.tenants
 
     expect { create_tenant!(subdomain: "boom") }.to raise_error(/seeding failed/)
 
     # Global row rolled back with the after_create transaction...
-    expect(Tenant.where(subdomain: "boom")).to be_empty
+    expect(Partitia::Tenanted::Tenant.where(subdomain: "boom")).to be_empty
     # ...and no orphaned tenant database survives (cleanup_on_failure).
     expect(ApplicationRecord.tenants).to match_array(tenants_before)
   end
 
   it "provisions with no hooks registered (empty registry is valid)" do
     expect { create_tenant!(subdomain: "acme") }.not_to raise_error
-    expect(ApplicationRecord.tenant_exist?(Tenant.last.handle)).to be(true)
+    expect(ApplicationRecord.tenant_exist?(Partitia::Tenanted::Tenant.last.handle)).to be(true)
   end
 end

@@ -5,7 +5,7 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Probes for Iam::Authenticatable request specs.
+  # Probes for Partitia::Iam::Authenticatable request specs.
   get "whoami" => "probe#whoami"
   get "protected" => "probe#protected_area"
   post "sign_in" => "probe#sign_in"

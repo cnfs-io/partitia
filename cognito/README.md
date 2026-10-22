@@ -1,4 +1,4 @@
-# CnfsCognito
+# Partitia::Cognito
 Short description and motivation.
 
 ## Usage
@@ -8,7 +8,7 @@ How to use my plugin.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem "cnfs_cognito"
+gem "partitia-cognito"
 ```
 
 And then execute:
@@ -18,7 +18,7 @@ $ bundle
 
 Or install it yourself as:
 ```bash
-$ gem install cnfs_cognito
+$ gem install partitia-cognito
 ```
 
 ## Contributing

@@ -1,4 +1,6 @@
-module CnfsUi
-  class ApplicationJob < ActiveJob::Base
+module Partitia
+  module Ui
+    class ApplicationJob < ActiveJob::Base
+    end
   end
 end

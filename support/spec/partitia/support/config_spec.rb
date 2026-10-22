@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe CnfsSupport::Config do
+RSpec.describe Partitia::Support::Config do
   # A representative subclass, as a CNFS gem would define it.
   let(:config_class) do
     Class.new(described_class) do

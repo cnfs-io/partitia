@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Iam::Secret do
+RSpec.describe Partitia::Iam::Secret do
   describe ".generate" do
     it "produces a greppable, high-entropy plaintext secret" do
       secret = described_class.generate
@@ -30,11 +30,11 @@ RSpec.describe Iam::Secret do
 
     it "changes the digest when the server-side hmac key changes" do
       digest = described_class.digest("x")
-      original = Iam.config.hmac_key
-      Iam.config.hmac_key = "a-different-key"
+      original = Partitia::Iam.config.hmac_key
+      Partitia::Iam.config.hmac_key = "a-different-key"
       expect(described_class.digest("x")).not_to eq(digest)
     ensure
-      Iam.config.hmac_key = original
+      Partitia::Iam.config.hmac_key = original
     end
   end
 end

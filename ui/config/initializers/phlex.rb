@@ -8,7 +8,7 @@ module Components
 end
 
 Rails.autoloaders.main.push_dir(
-  CnfsUi::Engine.root.join("app/views"), namespace: Views
+  Partitia::Ui::Engine.root.join("app/views"), namespace: Views
 )
 
 Rails.autoloaders.main.push_dir(
@@ -16,7 +16,7 @@ Rails.autoloaders.main.push_dir(
 )
 
 Rails.autoloaders.main.push_dir(
-  CnfsUi::Engine.root.join("app/components"), namespace: Components
+  Partitia::Ui::Engine.root.join("app/components"), namespace: Components
 )
 
 Rails.autoloaders.main.push_dir(

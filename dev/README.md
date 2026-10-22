@@ -1,6 +1,6 @@
-# cnfs_dev
+# partitia-dev
 
-Console ergonomics for CNFS Rails apps. `cnfs_dev` gives every CNFS gem a shared,
+Console ergonomics for CNFS Rails apps. `partitia-dev` gives every CNFS gem a shared,
 declarative way to contribute Pry/Rails console helpers — model shortcuts, custom
 commands, prompt segments, and a project-reset workflow — without any gem touching
 Pry directly. Everything it adds is console-only; it stays completely inert in web
@@ -8,10 +8,10 @@ and job processes.
 
 ## Installation
 
-Add `cnfs_dev` as a dependency in your gem's gemspec (or the app's Gemfile):
+Add `partitia-dev` as a dependency in your gem's gemspec (or the app's Gemfile):
 
 ```ruby
-spec.add_dependency "cnfs_dev"
+spec.add_dependency "partitia-dev"
 ```
 
 Require it before you register anything (do this in your engine, so ordering is
@@ -19,12 +19,12 @@ deterministic):
 
 ```ruby
 # lib/my_gem/engine.rb
-require "cnfs_dev"
+require "partitia/dev"
 ```
 
 ## Registering from a gem
 
-A gem contributes console features through a single `CnfsDev.console` block. Call
+A gem contributes console features through a single `Partitia::Dev.console` block. Call
 it from the engine's `console` block so it only runs in a console session:
 
 ```ruby
@@ -46,9 +46,9 @@ module MyGem
     module_function
 
     def install!
-      return unless defined?(CnfsDev)
+      return unless defined?(Partitia::Dev)
 
-      CnfsDev.console do |c|
+      Partitia::Dev.console do |c|
         c.namespace MyGem, "m"
         c.command(:hello) { puts "hi" }
         c.prompt_segment(color: :blue) { current_context }
@@ -60,7 +60,7 @@ module MyGem
 end
 ```
 
-Any number of gems may call `CnfsDev.console`; each call appends. The block yields
+Any number of gems may call `Partitia::Dev.console`; each call appends. The block yields
 a builder `c` supporting the contribution kinds below.
 
 ---
@@ -75,16 +75,16 @@ auto-discovered and given a family of shortcuts. You declare the namespace once 
 no per-model configuration.
 
 ```ruby
-c.namespace CnfsOkf, "o"    # discovers CnfsOkf::Bundle, ::Concept, ::ViewPort, ...
+c.namespace Partitia::Okf, "o"    # discovers Partitia::Okf::Bundle, ::Concept, ::ViewPort, ...
 c.namespace Chorus,  "c"    # discovers Chorus::Agent, ::AgentProfile, ...
 ```
 
 Each model gets a shortcut **code** of the form `<letter><model-code>`, e.g.
-`CnfsOkf::Bundle` → `ob`. Every code exposes this family (shown for `ob`):
+`Partitia::Okf::Bundle` → `ob`. Every code exposes this family (shown for `ob`):
 
 | Shortcut | Returns |
 |----------|---------|
-| `ob`     | the class itself (`CnfsOkf::Bundle`) |
+| `ob`     | the class itself (`Partitia::Okf::Bundle`) |
 | `oba`    | `.all` |
 | `obc`    | `.create(attrs = {})` |
 | `obf`    | `.find(id)`, or `.first` when called with no id |
@@ -92,12 +92,12 @@ Each model gets a shortcut **code** of the form `<letter><model-code>`, e.g.
 | `obp`    | `.all.pluck(*args)` — e.g. `obp :name, :age` |
 
 ```ruby
-ob            # => CnfsOkf::Bundle
-oba           # => CnfsOkf::Bundle.all
+ob            # => Partitia::Okf::Bundle
+oba           # => Partitia::Okf::Bundle.all
 obc name: "x" # => creates and returns a Bundle
-obf 3         # => CnfsOkf::Bundle.find(3)
-obl           # => CnfsOkf::Bundle.last
-obp :name     # => CnfsOkf::Bundle.all.pluck(:name)
+obf 3         # => Partitia::Okf::Bundle.find(3)
+obl           # => Partitia::Okf::Bundle.last
+obp :name     # => Partitia::Okf::Bundle.all.pluck(:name)
 ```
 
 `obf` and `obl` **memoize** — repeat calls return the same object without

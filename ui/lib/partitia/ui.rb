@@ -1,6 +1,8 @@
-require "cnfs_ui/version"
-require "cnfs_ui/engine"
+require "partitia/ui/version"
+require "partitia/ui/engine"
 
-module CnfsUi
-  # Your code goes here...
+module Partitia
+  module Ui
+    # Your code goes here...
+  end
 end

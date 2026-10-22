@@ -1,13 +1,13 @@
-require_relative "lib/cnfs_cognito/version"
+require_relative "lib/partitia/cognito/version"
 
 Gem::Specification.new do |spec|
-  spec.name        = "cnfs_cognito"
-  spec.version     = CnfsCognito::VERSION
+  spec.name        = "partitia-cognito"
+  spec.version     = Partitia::Cognito::VERSION
   spec.authors     = [ "Robert Roach" ]
   spec.email       = [ "rjayroach@gmail.com" ]
   spec.homepage    = "TODO"
-  spec.summary     = "TODO: Summary of CnfsCognito."
-  spec.description = "TODO: Description of CnfsCognito."
+  spec.summary     = "TODO: Summary of Partitia::Cognito."
+  spec.description = "TODO: Description of Partitia::Cognito."
   spec.license     = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
@@ -23,6 +23,10 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 8.1.3"
+  # Config base (Partitia::Support::Config), Logging and Instrumentable.
+  spec.add_dependency "partitia-support"
+  # partitia-iam is NOT a dependency: the host wires identity_resolver to
+  # Partitia::Iam::Resolution (ADR 0004); the broker never references Iam.
   # OIDC/JWT verification (ID-token signature, iss/aud/exp/nonce). Do not
   # hand-roll JWT/JWKS validation (Plan 003 WS2).
   spec.add_dependency "jwt"

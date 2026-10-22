@@ -1,4 +1,4 @@
-# Authentik dev stack for the cnfs_cognito broker.
+# Authentik dev stack for the partitia-cognito broker.
 #
 # DEV ONLY — the test suite never needs this (specs stub the IdP HTTP surface
 # via WebMock and pass with Docker stopped). Bring it up with `bin/authentik up`.

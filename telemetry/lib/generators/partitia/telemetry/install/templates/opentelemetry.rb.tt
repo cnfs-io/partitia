@@ -2,10 +2,10 @@
 
 # OpenTelemetry SDK configuration — owned by this app, safe to edit.
 #
-# cnfs_telemetry itself depends on the OTel *API* only and stays a no-op until
+# partitia-telemetry itself depends on the OTel *API* only and stays a no-op until
 # this file installs and configures the *SDK*. Everything below is host policy:
 # the service name, which exporter, and where traces are sent. The gem's job is
-# only to turn cnfs-prefixed ActiveSupport::Notifications into spans; this file
+# only to turn partitia-prefixed ActiveSupport::Notifications into spans; this file
 # decides what happens to those spans.
 #
 # Local target: an external telemetry stack (e.g. chorus/services/telemetry, run
@@ -16,7 +16,7 @@ require "opentelemetry/sdk"
 require "opentelemetry/exporter/otlp"
 
 # Host-side auto-instrumentation is opt-in. Uncomment after adding the matching
-# gems to your Gemfile (see the cnfs_telemetry README). Use EITHER the -all
+# gems to your Gemfile (see the partitia-telemetry README). Use EITHER the -all
 # metapackage OR hand-picked gems, never both.
 # require "opentelemetry/instrumentation/all"
 
@@ -34,7 +34,7 @@ OpenTelemetry::SDK.configure do |c|
   # c.use "OpenTelemetry::Instrumentation::Rack"
 end
 
-# Attach the cnfs_telemetry notification -> span bridge. The Railtie already
+# Attach the partitia-telemetry notification -> span bridge. The Railtie already
 # calls this on boot; the explicit call here is harmless (idempotent) and makes
 # the wiring visible next to the SDK config it depends on.
-CnfsTelemetry.install!
+Partitia::Telemetry.install!

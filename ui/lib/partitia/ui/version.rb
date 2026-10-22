@@ -1,3 +1,5 @@
-module CnfsUi
-  VERSION = "0.1.0"
+module Partitia
+  module Ui
+    VERSION = "0.1.0"
+  end
 end

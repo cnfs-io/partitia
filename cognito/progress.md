@@ -1,4 +1,4 @@
-# cnfs_cognito — progress
+# partitia-cognito — progress
 
 Append-only. Each entry records what shipped, decisions worth flagging, and how
 to run it. Newest at the bottom.
@@ -14,14 +14,14 @@ this session — see the caveat below.
 ### What shipped
 
 - **WS1 — Engine + config.** Converted the skeleton railtie to a full
-  `CnfsCognito::Engine` (`isolate_namespace`). RSpec + a **lean, DB-less
+  `Partitia::Cognito::Engine` (`isolate_namespace`). RSpec + a **lean, DB-less
   `spec/dummy`** that mounts the engine at `/auth`. Config slots
-  (`CnfsCognito.*`): `identity_resolver` (no default — raises a helpful
+  (`Partitia::Cognito.*`): `identity_resolver` (no default — raises a helpful
   `ConfigurationError` if used unset), `policy_resolver` (default
-  `->(_) { :invite_only }`, fail-closed), `session_key` (`:iam_user_id`),
+  `->(_) { :invite_only }`, fail-closed), `session_key` (`:partitia_iam_user_id`),
   `provider` (no default — raises), `after_sign_in_path` / `after_sign_out_path`
   (default `/`, string-or-callable).
-- **WS2 — Assertion + providers.** `CnfsCognito::Assertion` (immutable, exactly
+- **WS2 — Assertion + providers.** `Partitia::Cognito::Assertion` (immutable, exactly
   the ADR 0004 fields). `Providers::Base` duck + `VerificationError`.
   `Providers::Registry` (register/fetch by name). `Providers::Oidc` — discovery
   + JWKS fetch/cache (refetch-on-unknown-kid), ID-token verification via the
@@ -58,7 +58,7 @@ this session — see the caveat below.
   still "RSpec + spec/dummy mounting the engine," just without the parts a broker
   has no use for. Fewer moving parts, no schema to maintain.
 - **Skeleton fixes.** The generated `Gemfile` pointed its path gems at
-  `../cnfs_support` / `../cnfs_dev`; the real dirs are `../support` / `../dev` —
+  `../partitia-support` / `../partitia-dev`; the real dirs are `../support` / `../dev` —
   fixed. Removed the unused `railtie.rb`.
 - **Authentik pinned tag `2024.10.5`, host port `9000`** (health at
   `/-/health/ready/`). Never `:latest`.
@@ -97,14 +97,14 @@ Layered level-graded `logger` lines onto the broker's auth seams
 level policy (debug=flow, info=change, warn=anomaly, error=fault) and mandatory
 block form. `SessionsController` already had `logger` (railtie → gem
 `ApplicationController`); the providers are POROs, so `Providers::Base` gained an
-explicit `include CnfsSupport::Logging` and `Oidc` inherits it.
+explicit `include Partitia::Support::Logging` and `Oidc` inherits it.
 
-- **Tag is `cnfs_cognito` by construction — including the nested provider.**
+- **Tag is `partitia_cognito` by construction — including the nested provider.**
   `Providers::Oidc` sits three namespaces deep, but `component_tag` keys off the
-  first segment (`CnfsCognito`), so its lines still collapse to the flat
-  `cnfs_cognito` tag — matching the component the hand-rolled provider
+  first segment (`Partitia::Cognito`), so its lines still collapse to the flat
+  `partitia_cognito` tag — matching the component the hand-rolled provider
   `instrument` already pins. A spec asserts a nested-provider line lands under
-  `[cnfs_cognito]` (the regression guard: no `cnfs_cognito/providers` tag can
+  `[partitia-cognito]` (the regression guard: no `partitia/cognito/providers` tag can
   occur).
 - **Level discipline.** Expected security verdicts (state mismatch, id-token
   verification failure, JWKS unknown-`kid` refetch) are **`warn`**, not error;
@@ -115,11 +115,11 @@ explicit `include CnfsSupport::Logging` and `Oidc` inherits it.
   status only, never the form body. Specs push sentinel `id_token`/`code`/
   `client_secret` values through the callback + provider paths and assert
   absence from the joined output.
-- **Raise verbosity:** `CnfsSupport::Logging.levels["cnfs_cognito"] = :debug` to
+- **Raise verbosity:** `Partitia::Support::Logging.levels["partitia_cognito"] = :debug` to
   watch the full arc (login start → callback → state validated → token exchange
   → verify → resolving → sign-in ok); the default floor `:info` shows only
   `sign-in ok` / `sign-out`.
-- **WS3 (verified, no code):** `CnfsSupport::Logging.bridge_to_spans` left at its
+- **WS3 (verified, no code):** `Partitia::Support::Logging.bridge_to_spans` left at its
   default (**off**). No `instrument(...)` payload or block shape changed —
   logging rides alongside the existing spans (`event[:status]`,
   `event[:rotated]`, `event[:outcome]`, `event[:issuer]/[:subject]` untouched).
@@ -129,9 +129,9 @@ rubocop` → clean on all changed files; the sole remaining offense is a
 pre-existing parse error in the `install` generator's config **template**
 (out of scope per the plan, unmodified here).
 
-## Plan 006 — Config adoption (CnfsSupport::Config)
+## Plan 006 — Config adoption (Partitia::Support::Config)
 
-**Config inventory (WS1).** Two kinds of setting lived in `cnfs_cognito`:
+**Config inventory (WS1).** Two kinds of setting lived in `partitia-cognito`:
 - **Provider connection config = DATA** — `issuer`, `client_id`,
   `client_secret` (**secret**), `scopes`. Previously hand-plucked from ENV
   (`ENV.fetch("AUTHENTIK_*")`) as constructor kwargs in the initializer/template,
@@ -139,27 +139,27 @@ pre-existing parse error in the `install` generator's config **template**
 - **Inversion SLOTS = callables** — `identity_resolver`, `policy_resolver`,
   `provider`, `session_key`, `after_sign_in_path`, `after_sign_out_path`. These
   stay as module accessors with fail-loud semantics (**not** migrated;
-  `session_key` reviewed and kept as a slot to match `Iam`'s).
+  `session_key` reviewed and kept as a slot to match `Partitia::Iam`'s).
 
-**Migrated (WS2).** New `CnfsCognito::Config < CnfsSupport::Config`
-(`config_name :cnfs_cognito`, `lib/cnfs_cognito/config.rb`) carries the four
+**Migrated (WS2).** New `Partitia::Cognito::Config < Partitia::Support::Config`
+(`config_name :partitia_cognito`, `lib/partitia/cognito/config.rb`) carries the four
 connection values: `issuer`/`client_id`/`client_secret` (no defaults) and
 `scopes` (default `%w[openid email profile]`). Resolves
-`config/cnfs_cognito.yml` → `credentials.cnfs_cognito` → `ENV["CNFS_COGNITO_*"]`.
-`cnfs_cognito.rb` now `require`s it (cnfs_support is already a path gem in the
-Gemfile). The module slots are unchanged — `spec/cnfs_cognito/config_spec.rb`
-(slots) still green; `spec/cnfs_cognito/provider_config_spec.rb` added (data).
+`config/partitia_cognito.yml` → `credentials.partitia_cognito` → `ENV["PARTITIA_COGNITO_*"]`.
+`partitia_cognito.rb` now `require`s it (partitia-support is already a path gem in the
+Gemfile). The module slots are unchanged — `spec/partitia/cognito/config_spec.rb`
+(slots) still green; `spec/partitia/cognito/provider_config_spec.rb` added (data).
 
-**Generator (WS5).** `install/templates/cnfs_cognito.rb` now builds the provider
-from `CnfsCognito::Config.{issuer,client_id,client_secret,scopes}` — no
+**Generator (WS5).** `install/templates/partitia_cognito.rb` now builds the provider
+from `Partitia::Cognito::Config.{issuer,client_id,client_secret,scopes}` — no
 `ENV.fetch`, no secret literal; the `install_generator.rb` post-install `say`
-points at `config/cnfs_cognito.yml` (non-secret) and `credentials:edit` /
-`CNFS_COGNITO_CLIENT_SECRET` (secret). Slots left exactly as-is.
+points at `config/partitia_cognito.yml` (non-secret) and `credentials:edit` /
+`PARTITIA_COGNITO_CLIENT_SECRET` (secret). Slots left exactly as-is.
 
 **⚠️ SECRET ROTATION REQUIRED (WS4 — Roberto action, not automatable here).**
-Single's `config/initializers/cnfs_cognito.rb` previously contained a **real,
+Single's `config/initializers/partitia_cognito.rb` previously contained a **real,
 plaintext Authentik `client_secret`** (128-char literal). It was **relocated**
-to `credentials.cnfs_cognito.client_secret` (verified round-trip) so login keeps
+to `credentials.partitia_cognito.client_secret` (verified round-trip) so login keeps
 working, and removed from the initializer. But a secret committed inline is
 **compromised** — relocation is necessary, not sufficient. **The value must be
 regenerated in Authentik** (OAuth2/OIDC provider) and the new secret written to
@@ -177,10 +177,10 @@ parser vs the unchanged `identity_resolver` hash-shorthand; gem sets no
 **Status:** WS1 complete. **51 examples, 0 failures.** RuboCop clean.
 Notification-layer specs; WebMock OIDC harness; no container/network.
 
-### What shipped (WS1 — cnfs_cognito spans)
+### What shipped (WS1 — partitia-cognito spans)
 
 **`subject` removed (live PII + cardinality bug — WS1.1).**
-`CnfsCognito::Providers::Oidc#verify` set `event[:subject] = assertion.subject`.
+`Partitia::Cognito::Providers::Oidc#verify` set `event[:subject] = assertion.subject`.
 The IdP `sub` is per-user: PII **and** a span-metric series explosion. Removed as
 a span attribute (`issuer` — a bounded host — kept). Audited the whole gem: no
 other span attached `subject`/`email`/`principal_id`/`access_key_id`/session-id/
@@ -204,16 +204,16 @@ line, never a metric dimension.
   `policy` — left unchanged; `login_start` keeps its `has_link_token` boolean.
 
 **Hand-rolled instrument migrated (WS1.4).** `Providers::Base` now
-`include CnfsSupport::Instrumentable`; the hand-rolled `instrument` (and its
+`include Partitia::Support::Instrumentable`; the hand-rolled `instrument` (and its
 stale `component_tag` comment) are gone. Verified emitted names are **identical**
-(`cnfs_cognito.oidc.<verb>`): `component_tag("CnfsCognito::Providers::Oidc")` →
-`cnfs_cognito`, subject `oidc`. The existing instrumentation specs subscribe to
+(`partitia_cognito.oidc.<verb>`): `component_tag("Partitia::Cognito::Providers::Oidc")` →
+`partitia_cognito`, subject `oidc`. The existing instrumentation specs subscribe to
 those exact names and stay green, which is the name-unchanged proof.
 
 **The cardinality/PII guard now reads the redaction config (WS1.5).** Guards in
 `spec/providers/oidc_instrumentation_spec.rb` and
 `spec/requests/sessions_instrumentation_spec.rb` drive the provider + a full
-login and assert `payload.keys & CnfsSupport::RedactionConfig.sensitive_fields
+login and assert `payload.keys & Partitia::Support::RedactionConfig.sensitive_fields
 == []` — forbidden set **read from Plan 006's config, not hard-coded**. Added:
 verify-outcome-per-failure-path, `endpoint`/no-`url` on http, `exchange_code`
 outcome, and `not have_key(:subject)` on verify.
@@ -229,14 +229,14 @@ CNFS Grafana dashboards live in
 `~/spikes/chorus/storage/telemetry/dashboards/cnfs/`
 (`cnfs-auth-overview.json`, `cnfs-operation-latency.json`; stable uids). They
 query the **Tempo** datasource (uid `tempo`) with TraceQL-metrics over
-`cnfs_cognito.*` / `cnfs_iam.*` span names + the WS1 dimensions (`outcome`,
+`partitia_cognito.*` / `partitia_iam.*` span names + the WS1 dimensions (`outcome`,
 `endpoint`, `status`, `policy`, `rotated`). Point the stack at them by setting
 **`DASHBOARDS_DIR`** in `services/telemetry/.env` (gitignored; `.env.example`
 documents it) to that store, then `podman compose up -d`.
 
 **Verified (WS3, complete).** The `single` boot failure was a leaked `RUBYLIB`,
 not a missing dep — `unset RUBYLIB && bin/rails …` boots. Drove the registered
-provider (`CnfsCognito::Providers::Authentik`) against a **live Authentik** at
+provider (`Partitia::Cognito::Providers::Authentik`) against a **live Authentik** at
 `:9000` (bad-token verify → `outcome=malformed`; bogus exchange_code →
 `outcome=failed` + discovery/token http spans), `force_flush`ed, inspected
 Tempo. Confirmed on real spans: `verify.outcome`=malformed,
@@ -246,16 +246,16 @@ into the "cnfs" folder and **every panel query returns real series against live
 data**.
 
 **Two findings the live run forced (dashboards corrected accordingly):**
-1. **Attribute keys are namespaced by the full event name.** The `cnfs_telemetry`
+1. **Attribute keys are namespaced by the full event name.** The `partitia-telemetry`
    bridge sets `span."#{event_name}.#{key}"` (intentional + tested), so a query
-   references `span."cnfs_cognito.authentik.verify.outcome"`, not `span.outcome`.
+   references `span."partitia_cognito.authentik.verify.outcome"`, not `span.outcome`.
 2. **Cognito span names carry the provider subject.** `Authentik < Oidc` (empty
-   subclass) ⇒ real spans are `cnfs_cognito.authentik.*`, not `…oidc.*` — the
+   subclass) ⇒ real spans are `partitia_cognito.authentik.*`, not `…oidc.*` — the
    name the specs assert (they test `Oidc` directly). The plan assumed `oidc` +
    bare attribute keys; the dashboards now use the verified `authentik` names and
    fully-qualified keys. Both are bridge/provider behavior outside WS1 scope —
    flagged for architecture (they couple every dashboard query to the exact span
    name and to the active provider). Also noted separately: `single`'s
-   `config/cnfs_cognito.yml` still holds a **plaintext client_secret** (a
+   `config/partitia_cognito.yml` still holds a **plaintext client_secret** (a
    config/secrets issue, not telemetry — belongs to the Plan 006 rotation TODO
    above, but re-confirmed present).

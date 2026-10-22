@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Iam::Urn do
+RSpec.describe Partitia::Iam::Urn do
   describe ".build" do
     it "produces the AWS-shaped grammar with an empty region for IAM" do
       urn = described_class.build(account: "a7f3k2xy", resource_type: "user", resource_id: "alice")

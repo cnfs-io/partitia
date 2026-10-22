@@ -1,4 +1,4 @@
-# cnfs_tenanted — progress
+# partitia-tenanted — progress
 
 Append-only completion entries, one per plan (see `~/spikes/chorus/doc`).
 
@@ -6,7 +6,7 @@ Append-only completion entries, one per plan (see `~/spikes/chorus/doc`).
 
 ## Plan 001 — Global plane, reserved tenant, hooks (2026-07-05)
 
-Shaped `cnfs_tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examples,
+Shaped `partitia-tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examples,
 0 failures; `bundle exec rubocop` → clean.** Six workstreams:
 
 ### What shipped
@@ -14,7 +14,7 @@ Shaped `cnfs_tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examp
 - **WS1 — Removed the per-tenant `Account`** (ownership rule, ADR 0003 §6). Deleted
   the model, controller, views, `create_accounts` migration, and the install
   generator's `accounts_controller` template + reference. `Tenant` no longer
-  seeds an Account; the per-database singleton is `Iam::Account`, owned by iam.
+  seeds an Account; the per-database singleton is `Partitia::Iam::Account`, owned by iam.
 - **WS2 — Renamed `Tenancy*` → `TenantNotFound*`.** Controller, view dir, route
   target, and generator template. Kept the `tenant-unknown` path, the
   `tenant_unknown` helper, and `#unknown` semantics.
@@ -25,10 +25,10 @@ Shaped `cnfs_tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examp
   place** (pre-v1 rule). Databases are keyed by `handle`; `subdomain` is the
   mutable lookup. `TenantResolution` now does subdomain → `Tenant` lookup →
   `with_tenant(handle)`. `Resolvers.default` excludes the reserved handle.
-- **WS4 — `after_provision` hook registry.** `CnfsTenanted.after_provision` is an
+- **WS4 — `after_provision` hook registry.** `Partitia::Tenanted.after_provision` is an
   ordered callable list; each hook receives a **provisioning context** (`#name`
   + `#owner_email`) and runs inside `with_tenant(handle)` on the fresh DB.
-  `Tenant#after_create` delegates to `CnfsTenanted.run_provision`.
+  `Tenant#after_create` delegates to `Partitia::Tenanted.run_provision`.
 - **WS5 — Reserved tenant + platform entry point + console guard.**
   `RESERVED_HANDLE = "platform"`; `provision_platform!(owner_email:)` (idempotent,
   runs the same registry with a `PlatformContext`); `with_platform` (pins the
@@ -46,7 +46,7 @@ Shaped `cnfs_tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examp
   lookup a pure request resolver can't do). Resolution: the engine now sets
   `config.active_record_tenanted.tenant_resolver = ->(_){ nil }` so the
   middleware runs every request untenanted and defers to
-  `CnfsTenanted::TenantResolution` (the concern owns the subdomain→handle lookup
+  `Partitia::Tenanted::TenantResolution` (the concern owns the subdomain→handle lookup
   and the richer not-found seam). This is a gem-level change affecting all
   hosts. *Feedback for the doc set:* WS3.4 described the concern but not the
   middleware neutralization it requires — worth folding into ADR 0003 §5 or the
@@ -54,7 +54,7 @@ Shaped `cnfs_tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examp
 - **Platform scope-guard mechanism (WS5.3).** A `sql.active_record`
   `ActiveSupport::Notifications` subscriber scoped to the `with_platform` block,
   parsing the table name from each query and raising `PlatformScopeViolation`
-  for anything outside `platform_table_prefixes` (default `%w[iam_]`) + AR
+  for anything outside `platform_table_prefixes` (default `%w[partitia_iam_]`) + AR
   internals. It is a **tripwire, not a transactional gate**: `sql.active_record`
   fires *after* execution, so a violating write reaches the reserved DB before
   the guard raises. Acceptable pre-v1 (no app-model writes should occur in the
@@ -74,7 +74,7 @@ Shaped `cnfs_tenanted` into the ADR 0003 gem. **`bundle exec rspec` → 52 examp
   `storage/<env>/platform.sqlite3` and re-running (pre-v1; noted in the method).
 - **Dummy wiring added (WS6).** `spec/dummy` gained host controllers
   (`Tenants`, `TenantNotFound`, plus `Probe`/`ProbeOverride` for resolution
-  specs), `include CnfsTenanted::TenantResolution` in its `ApplicationController`,
+  specs), `include Partitia::Tenanted::TenantResolution` in its `ApplicationController`,
   and probe routes. The stale committed `db/schema.rb` (which Rails loads in
   preference to migrations) had to be deleted and regenerated so the new
   `handle`/`owner_email` columns landed — a reminder that in-place migration
@@ -98,7 +98,7 @@ drifts after an in-place migration edit: `rm spec/dummy/db/schema.rb` then
 
 ## Plan 004 — Integration: three gems, one dummy, end-to-end (2026-07-05)
 
-Wired `iam` + `cnfs_cognito` into this gem's `spec/dummy` and proved the whole
+Wired `iam` + `partitia-cognito` into this gem's `spec/dummy` and proved the whole
 architecture with request-level specs. **`bundle exec rspec` → 67 examples, 0
 failures** (52 from Plan 001 + 15 integration), stable across seeds; RuboCop
 clean. **iam's own suite untouched — still 78 green** (the single-tenant
@@ -106,10 +106,10 @@ regression guard).
 
 ### What shipped
 
-- **Dummy-only sibling gems.** `iam` and `cnfs_cognito` added to the **Gemfile**
-  (never the gemspec — cnfs_tenanted depends on neither). iam's `db/migrate`
-  joins the tenant scope via the CnfsSupport registry, so every tenant DB
-  (reserved included) carries `iam_*` tables; the global DB carries only
+- **Dummy-only sibling gems.** `iam` and `partitia-cognito` added to the **Gemfile**
+  (never the gemspec — partitia-tenanted depends on neither). iam's `db/migrate`
+  joins the tenant scope via the Partitia::Support registry, so every tenant DB
+  (reserved included) carries `partitia_iam_*` tables; the global DB carries only
   `tenants` (asserted). iam's `TenantSeeder` auto-registers into
   `after_provision` (its engine's guarded `after_initialize`).
 - **`config/initializers/identity.rb`** — the canonical host wiring, and the
@@ -118,7 +118,7 @@ regression guard).
   `platform_console_guard`, `after_sign_in/out_path`, provider registration, and
   the Rack tenant resolver (below).
 - **Dummy MVC.** Mounted the broker at `/auth`; `/dashboard` (operator route:
-  `Iam::Authenticatable` + `require_authentication` + one `DashboardPolicy` with
+  `Partitia::Iam::Authenticatable` + `require_authentication` + one `DashboardPolicy` with
   `verify_authorized`, fail-closed); `/app/login` (JIT entry) and
   `/platform/login` (reserved-DB entry). Test setup provisions the platform DB
   and seeds an App Admin explicitly.
@@ -128,13 +128,13 @@ regression guard).
   constraints + `RootRecovery`; platform console (deny anon / allow App Admin /
   provision through it) + scope guard; reserved-not-from-subdomain;
   unknown-subdomain seam; global-DB-has-no-identity-tables. The OIDC WebMock
-  harness was **copied** from cnfs_cognito's specs (cross-gem `require` of a
+  harness was **copied** from partitia-cognito's specs (cross-gem `require` of a
   gem's spec-support path is brittle; copy noted here).
 
 ### Cross-gem friction discovered (fed back / flagged)
 
 The inversion-slot architecture composed with **zero changes to iam or
-cnfs_cognito** — every touchpoint was a host-configured slot. The friction was
+partitia-cognito** — every touchpoint was a host-configured slot. The friction was
 all at the tenant-resolution layer:
 
 1. **The broker's callback runs in a mounted engine, which the Plan 001
@@ -143,15 +143,15 @@ all at the tenant-resolution layer:
    (identity.rb), so tenant context is established at the Rack layer for host
    routes AND mounted engines (ADR 0001: DB selection precedes everything). This
    is set in `after_initialize` to win over Plan 001's engine-initializer
-   neutralization. **Recommendation:** cnfs_tenanted should ship this
+   neutralization. **Recommendation:** partitia-tenanted should ship this
    handle-mapping resolver as a first-class option rather than leaving each host
    to write it — Plan 001's concern-only default doesn't cover mounted engines.
    (Done in the dummy since the a-r-tenanted resolver is a host-config point by
    design; flagged for promotion into the gem.)
-2. **cnfs_cognito resolves policy at CALLBACK time**, when only the callback
+2. **partitia-cognito resolves policy at CALLBACK time**, when only the callback
    request is visible — so route-based policy (`/app` → `:jit`) can't read the
    originating path. The host carries the intent through the OIDC round-trip in
-   the session (the `/app/login` entry sets it). Flag for cnfs_cognito: consider
+   the session (the `/app/login` entry sets it). Flag for partitia-cognito: consider
    stashing a caller-supplied policy hint in `new`.
 3. **The platform (App Admin) login authenticates as the platform** but the
    reserved DB is not subdomain-addressable (ADR 0003 §2). A `/platform/login`

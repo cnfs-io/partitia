@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe CnfsCognito::Providers::Oidc do
+RSpec.describe Partitia::Cognito::Providers::Oidc do
   subject(:provider) { oidc_provider }
 
   before { stub_oidc_discovery }
@@ -9,7 +9,7 @@ RSpec.describe CnfsCognito::Providers::Oidc do
     it "returns an Assertion with the expected fields for a valid token" do
       assertion = provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
 
-      expect(assertion).to be_a(CnfsCognito::Assertion)
+      expect(assertion).to be_a(Partitia::Cognito::Assertion)
       expect(assertion.issuer).to eq(OidcHelpers::ISSUER)
       expect(assertion.subject).to eq("idp-sub-1")
       expect(assertion.email).to eq("user@example.com")
@@ -22,41 +22,41 @@ RSpec.describe CnfsCognito::Providers::Oidc do
       other_key = OpenSSL::PKey::RSA.generate(2048)
       token = id_token(key: other_key)
       expect { provider.verify(id_token: token, nonce: OidcHelpers::NONCE) }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "rejects an expired token" do
       token = id_token(exp: Time.now.to_i - 60)
       expect { provider.verify(id_token: token, nonce: OidcHelpers::NONCE) }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "rejects a wrong issuer" do
       token = id_token(iss: "https://evil.example")
       expect { provider.verify(id_token: token, nonce: OidcHelpers::NONCE) }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "rejects a wrong audience" do
       token = id_token(aud: "someone-else")
       expect { provider.verify(id_token: token, nonce: OidcHelpers::NONCE) }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "rejects a mismatched nonce" do
       expect { provider.verify(id_token: id_token, nonce: "different-nonce") }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "rejects a missing nonce claim" do
       token = id_token(nonce: nil)
       expect { provider.verify(id_token: token, nonce: OidcHelpers::NONCE) }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "rejects a malformed token" do
       expect { provider.verify(id_token: "not.a.jwt", nonce: OidcHelpers::NONCE) }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
     it "refetches the JWKS when the kid is unknown, then verifies" do

@@ -1,11 +1,11 @@
 require "spec_helper"
 
-RSpec.describe CnfsSupport::Instrumentable do
+RSpec.describe Partitia::Support::Instrumentable do
   # A stand-in for a namespaced CNFS model. stub_const gives it a real,
   # fully-qualified name so component_tag / demodulize behave as in production.
   before do
-    stub_const("CnfsOkf::Bundle", Class.new do
-      include CnfsSupport::Instrumentable
+    stub_const("Partitia::Okf::Bundle", Class.new do
+      include Partitia::Support::Instrumentable
 
       def do_create(&block)
         instrument(:create, bundle_id: 7, path: "/tmp/x", &block)
@@ -15,25 +15,25 @@ RSpec.describe CnfsSupport::Instrumentable do
 
   describe ".event_name" do
     it "composes <component>.<class>.<verb> from a fully-qualified name" do
-      expect(described_class.event_name("CnfsOkf::Bundle", :create))
-        .to eq("cnfs_okf.bundle.create")
+      expect(described_class.event_name("Partitia::Okf::Bundle", :create))
+        .to eq("partitia_okf.bundle.create")
     end
 
     it "accepts a string verb identically" do
-      expect(described_class.event_name("CnfsOkf::Bundle", "create"))
-        .to eq("cnfs_okf.bundle.create")
+      expect(described_class.event_name("Partitia::Okf::Bundle", "create"))
+        .to eq("partitia_okf.bundle.create")
     end
 
     it "reuses component_tag for the component half, so it matches the log tag" do
-      component = described_class.event_name("CnfsOkf::Bundle", :x).split(".").first
-      expect(component).to eq(CnfsSupport.component_tag("CnfsOkf::Bundle"))
+      component = described_class.event_name("Partitia::Okf::Bundle", :x).split(".").first
+      expect(component).to eq(Partitia::Support.component_tag("Partitia::Okf::Bundle"))
     end
   end
 
   describe "#instrument (instance)" do
     it "emits an ActiveSupport::Notifications event named for the instance's class" do
-      events = capture_events("cnfs_okf.bundle.create") do
-        CnfsOkf::Bundle.new.do_create { :done }
+      events = capture_events("partitia_okf.bundle.create") do
+        Partitia::Okf::Bundle.new.do_create { :done }
       end
 
       expect(events.size).to eq(1)
@@ -41,11 +41,11 @@ RSpec.describe CnfsSupport::Instrumentable do
 
     it "passes the payload through and yields it for enrichment" do
       payload = nil
-      ActiveSupport::Notifications.subscribe("cnfs_okf.bundle.create") do |*, pl|
+      ActiveSupport::Notifications.subscribe("partitia_okf.bundle.create") do |*, pl|
         payload = pl
       end
 
-      CnfsOkf::Bundle.new.do_create do |pl|
+      Partitia::Okf::Bundle.new.do_create do |pl|
         pl[:concept_count] = 3
       end
 
@@ -55,15 +55,15 @@ RSpec.describe CnfsSupport::Instrumentable do
     end
 
     it "returns the block's value" do
-      result = CnfsOkf::Bundle.new.do_create { :the_return }
+      result = Partitia::Okf::Bundle.new.do_create { :the_return }
       expect(result).to eq(:the_return)
     end
   end
 
   describe ".instrument (class-level)" do
     it "uses the class's own name as the subject" do
-      events = capture_events("cnfs_okf.bundle.build") do
-        CnfsOkf::Bundle.instrument(:build) { :ok }
+      events = capture_events("partitia_okf.bundle.build") do
+        Partitia::Okf::Bundle.instrument(:build) { :ok }
       end
 
       expect(events.size).to eq(1)

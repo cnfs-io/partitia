@@ -1,4 +1,4 @@
 # desc "Explaining what the task does"
-# task :iam do
+# task "partitia:iam:example" do
 #   # Task goes here
 # end

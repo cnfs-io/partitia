@@ -4,6 +4,6 @@
 class AppLoginController < ApplicationController
   def create
     session[:oidc_policy] = "jit"
-    redirect_to cnfs_cognito.login_path(link_token: params[:link_token]), allow_other_host: false
+    redirect_to partitia_cognito.login_path(link_token: params[:link_token]), allow_other_host: false
   end
 end

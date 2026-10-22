@@ -1,8 +1,8 @@
 # An operator route proving that resolved identity feeds authorization
 # fail-closed (Plan 004 WS1.4). Runs behind TenantResolution (inherited from
-# ApplicationController), Iam::Authenticatable, and Pundit's verify_authorized.
+# ApplicationController), Partitia::Iam::Authenticatable, and Pundit's verify_authorized.
 class DashboardController < ApplicationController
-  include Iam::Authenticatable
+  include Partitia::Iam::Authenticatable
   include Pundit::Authorization
 
   before_action :require_authentication

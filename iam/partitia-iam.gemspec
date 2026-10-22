@@ -1,13 +1,13 @@
-require_relative "lib/iam/version"
+require_relative "lib/partitia/iam/version"
 
 Gem::Specification.new do |spec|
-  spec.name        = "iam"
-  spec.version     = Iam::VERSION
+  spec.name        = "partitia-iam"
+  spec.version     = Partitia::Iam::VERSION
   spec.authors     = [ "Robert Roach" ]
   spec.email       = [ "rjayroach@gmail.com" ]
   spec.homepage    = "TODO"
-  spec.summary     = "TODO: Summary of Iam."
-  spec.description = "TODO: Description of Iam."
+  spec.summary     = "TODO: Summary of Partitia::Iam."
+  spec.description = "TODO: Description of Partitia::Iam."
   spec.license     = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
@@ -23,6 +23,11 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 8.1.3"
+  # Config base (Partitia::Support::Config) + the migration-path plugin registry.
+  spec.add_dependency "partitia-support"
+  # Optional, detected at runtime with defined? and deliberately NOT declared:
+  # partitia-tenanted (after_provision seeding, tenant account handle) and
+  # partitia-dev (console shortcuts).
   # Encrypted attributes on IAM-owned models (credentials, tokens). The gem
   # declares has_encrypted; the host app owns the master key (LockboxConfig
   # + initializer), since Lockbox.master_key is process-global.

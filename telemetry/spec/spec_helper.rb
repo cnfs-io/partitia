@@ -1,4 +1,4 @@
-require "cnfs_telemetry"
+require "partitia/telemetry"
 
 Dir[File.join(__dir__, "support", "**", "*.rb")].sort.each { |file| require file }
 
@@ -19,6 +19,6 @@ RSpec.configure do |config|
   # The bridge keeps process-global subscription state. Detach between examples
   # so a test that installs the bridge never leaks subscribers into the next.
   config.after do
-    CnfsTelemetry.uninstall!
+    Partitia::Telemetry.uninstall!
   end
 end

@@ -9,7 +9,7 @@ require "rails_helper"
 RSpec.describe "Authentik (live)", :authentik do
   it "discovers the OIDC configuration from a running container" do
     WebMock.allow_net_connect!
-    provider = CnfsCognito::Providers::Authentik.new(
+    provider = Partitia::Cognito::Providers::Authentik.new(
       issuer: ENV.fetch("AUTHENTIK_ISSUER"),
       client_id: ENV.fetch("AUTHENTIK_CLIENT_ID", "test")
     )

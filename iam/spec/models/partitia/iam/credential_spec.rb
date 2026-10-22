@@ -1,13 +1,13 @@
 require "rails_helper"
 
-RSpec.describe Iam::Credential do
-  let(:owner) { create(:iam_machine_principal) }
+RSpec.describe Partitia::Iam::Credential do
+  let(:owner) { create(:partitia_iam_machine_principal) }
 
   describe "generation on create" do
     it "mints a valid, parseable access_key_id and stores only a digest" do
       credential = described_class.create!(owner: owner)
 
-      expect(Iam::AccessKeyId.valid?(credential.access_key_id)).to be(true)
+      expect(Partitia::Iam::AccessKeyId.valid?(credential.access_key_id)).to be(true)
       expect(credential.secret_digest).to be_present
       expect(credential.secret_digest).not_to eq(credential.secret)
     end
@@ -51,15 +51,15 @@ RSpec.describe Iam::Credential do
     end
 
     it "returns nil for an unknown but well-formed key" do
-      unknown = Iam::AccessKeyId.generate(account_handle: "handle01")
+      unknown = Partitia::Iam::AccessKeyId.generate(account_handle: "handle01")
       expect(described_class.authenticate(unknown, "iam_secret_x")).to be_nil
     end
   end
 
   describe "polymorphic owner" do
     it "works for both principal subclasses" do
-      human = create(:iam_human_principal)
-      machine = create(:iam_machine_principal)
+      human = create(:partitia_iam_human_principal)
+      machine = create(:partitia_iam_machine_principal)
 
       human_cred = described_class.create!(owner: human)
       machine_cred = described_class.create!(owner: machine)
@@ -71,11 +71,11 @@ RSpec.describe Iam::Credential do
 
   describe "#to_urn" do
     it "uses access_key as resource_type and the access_key_id as resource_id" do
-      Iam.config.account_handle = "handle01"
+      Partitia::Iam.config.account_handle = "handle01"
       credential = described_class.create!(owner: owner)
       expect(credential.to_urn).to eq("urn:cnfs:iam::handle01:access_key/#{credential.access_key_id}")
     ensure
-      Iam.config.account_handle = nil
+      Partitia::Iam.config.account_handle = nil
     end
   end
 end

@@ -9,13 +9,13 @@ RSpec.describe "integration: provisioning & isolation", type: :request do
     token = last_bootstrap_token
 
     ApplicationRecord.with_tenant(tenant.handle) do
-      expect(Iam::Account.count).to eq(1)
-      expect(Iam::Account.instance.name).to eq("Acme")
+      expect(Partitia::Iam::Account.count).to eq(1)
+      expect(Partitia::Iam::Account.instance.name).to eq("Acme")
 
-      roots = Iam::HumanPrincipal.where(root: true)
+      roots = Partitia::Iam::HumanPrincipal.where(root: true)
       expect(roots.count).to eq(1)
       expect(roots.first.email).to eq("root@acme.test")
-      expect(Iam::HumanPrincipal.find_by_link_token(token)).to eq(roots.first)
+      expect(Partitia::Iam::HumanPrincipal.find_by_link_token(token)).to eq(roots.first)
     end
   end
 
@@ -24,27 +24,27 @@ RSpec.describe "integration: provisioning & isolation", type: :request do
     b = create_tenant!(subdomain: "bbb", owner_email: "b@x.test")
 
     ApplicationRecord.with_tenant(a.handle) do
-      expect(Iam::HumanPrincipal.find_by(root: true).email).to eq("a@x.test")
+      expect(Partitia::Iam::HumanPrincipal.find_by(root: true).email).to eq("a@x.test")
     end
     ApplicationRecord.with_tenant(b.handle) do
-      expect(Iam::HumanPrincipal.find_by(root: true).email).to eq("b@x.test")
-      expect(Iam::HumanPrincipal.count).to eq(1) # only b's own root
+      expect(Partitia::Iam::HumanPrincipal.find_by(root: true).email).to eq("b@x.test")
+      expect(Partitia::Iam::HumanPrincipal.count).to eq(1) # only b's own root
     end
   end
 
   it "rolls the Tenant back when a provisioning hook fails" do
-    CnfsTenanted.after_provision << ->(_) { raise "seed boom" }
-    before_count = Tenant.count
+    Partitia::Tenanted.after_provision << ->(_) { raise "seed boom" }
+    before_count = Partitia::Tenanted::Tenant.count
 
     expect { create_tenant!(subdomain: "boom") }.to raise_error(/seed boom/)
-    expect(Tenant.count).to eq(before_count)
+    expect(Partitia::Tenanted::Tenant.count).to eq(before_count)
   end
 
   it "keeps the global DB free of identity tables (ADR 0003 §4)" do
-    tables = GlobalRecord.connection.tables
+    tables = Partitia::Tenanted::GlobalRecord.connection.tables
       .reject { |t| t.start_with?("sqlite", "ar_internal", "schema_mig") }
 
-    expect(tables).to eq([ "tenants" ])
-    expect(tables.grep(/\Aiam_/)).to be_empty
+    expect(tables).to eq([ "partitia_tenanted_tenants" ])
+    expect(tables.grep(/\Apartitia_iam_/)).to be_empty
   end
 end

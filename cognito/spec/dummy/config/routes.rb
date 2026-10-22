@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   # Mount the broker. Login/callback/logout live under /auth (Plan 003 WS3).
-  mount CnfsCognito::Engine => "/auth"
+  mount Partitia::Cognito::Engine => "/auth"
 
   get "up" => "rails/health#show", as: :rails_health_check
 

@@ -1,6 +1,6 @@
 require "spec_helper"
 
-RSpec.describe "CnfsSupport.each_plugin" do
+RSpec.describe "Partitia::Support.each_plugin" do
   # each_plugin is the sole place the "Rails first, then plugins, Engine-guarded"
   # walk lives. Rails is a module (not an Engine); plugins must be Engine
   # subclasses. Stub both so the walk can be exercised without a booted app.
@@ -15,23 +15,23 @@ RSpec.describe "CnfsSupport.each_plugin" do
   end
 
   it "yields Rails first, then registered plugins in registration order" do
-    allow(CnfsSupport).to receive(:plugins).and_return([ plugin_a, plugin_b ])
+    allow(Partitia::Support).to receive(:plugins).and_return([ plugin_a, plugin_b ])
 
-    expect { |b| CnfsSupport.each_plugin(&b) }
+    expect { |b| Partitia::Support.each_plugin(&b) }
       .to yield_successive_args(rails, plugin_a, plugin_b)
   end
 
   it "raises on a non-Engine member of plugins" do
-    allow(CnfsSupport).to receive(:plugins).and_return([ Class.new ])
+    allow(Partitia::Support).to receive(:plugins).and_return([ Class.new ])
 
-    expect { CnfsSupport.each_plugin { |_| } }
+    expect { Partitia::Support.each_plugin { |_| } }
       .to raise_error(/must be a Rails Engine/)
   end
 
   it "returns an Enumerator when called without a block" do
-    allow(CnfsSupport).to receive(:plugins).and_return([ plugin_a ])
+    allow(Partitia::Support).to receive(:plugins).and_return([ plugin_a ])
 
-    expect(CnfsSupport.each_plugin).to be_a(Enumerator)
-    expect(CnfsSupport.each_plugin.to_a).to eq([ rails, plugin_a ])
+    expect(Partitia::Support.each_plugin).to be_a(Enumerator)
+    expect(Partitia::Support.each_plugin.to_a).to eq([ rails, plugin_a ])
   end
 end

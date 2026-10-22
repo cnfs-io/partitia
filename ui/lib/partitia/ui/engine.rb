@@ -5,12 +5,14 @@ require "tailwindcss-rails"
 require "phlex-rails"
 
 
-module CnfsUi
-  class Engine < ::Rails::Engine
-    isolate_namespace CnfsUi
+module Partitia
+  module Ui
+    class Engine < ::Rails::Engine
+      isolate_namespace Partitia::Ui
 
-    config.generators do |g|
-      g.template_engine :tailwindcss
+      config.generators do |g|
+        g.template_engine :tailwindcss
+      end
     end
   end
 end

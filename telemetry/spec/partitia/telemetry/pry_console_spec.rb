@@ -1,6 +1,6 @@
 require "spec_helper"
 
-RSpec.describe CnfsTelemetry::PryConsole do
+RSpec.describe Partitia::Telemetry::PryConsole do
   # notif! attaches/detaches a real subscriber on the process-global bus; make
   # sure each example starts and ends in the OFF state.
   def reset_notif!
@@ -22,43 +22,43 @@ RSpec.describe CnfsTelemetry::PryConsole do
     expect(described_class.notif).to eq("telemetry notif OFF")
   end
 
-  it "logs cnfs events while ON" do
+  it "logs partitia events while ON" do
     logged = []
-    allow(described_class).to receive(:cnfs_telemetry_log) { |msg| logged << msg }
+    allow(described_class).to receive(:partitia_telemetry_log) { |msg| logged << msg }
 
     described_class.notif!
-    ActiveSupport::Notifications.instrument("cnfs_okf.bundle.create", bundle_id: 9) { :ok }
+    ActiveSupport::Notifications.instrument("partitia_okf.bundle.create", bundle_id: 9) { :ok }
 
-    expect(logged.join).to include("cnfs_okf.bundle.create")
+    expect(logged.join).to include("partitia_okf.bundle.create")
     expect(logged.join).to include("bundle_id")
   end
 
   it "does not log after being toggled OFF" do
     logged = []
-    allow(described_class).to receive(:cnfs_telemetry_log) { |msg| logged << msg }
+    allow(described_class).to receive(:partitia_telemetry_log) { |msg| logged << msg }
 
     described_class.notif!   # ON
     described_class.notif!   # OFF
-    ActiveSupport::Notifications.instrument("cnfs_okf.bundle.create") { :ok }
+    ActiveSupport::Notifications.instrument("partitia_okf.bundle.create") { :ok }
 
     expect(logged).to be_empty
   end
 
   describe ".install!" do
-    it "is a no-op when cnfs_dev is absent" do
-      hide_const("CnfsDev") if defined?(CnfsDev)
+    it "is a no-op when partitia-dev is absent" do
+      hide_const("Partitia::Dev") if defined?(Partitia::Dev)
       expect { described_class.install! }.not_to raise_error
     end
 
-    it "registers a notif! command with cnfs_dev's console when present" do
+    it "registers a notif! command with partitia-dev's console when present" do
       fake_builder = double("builder")
-      fake_cnfs_dev = Module.new do
+      fake_partitia_dev = Module.new do
         def self.console
           yield(@builder)
         end
       end
-      fake_cnfs_dev.instance_variable_set(:@builder, fake_builder)
-      stub_const("CnfsDev", fake_cnfs_dev)
+      fake_partitia_dev.instance_variable_set(:@builder, fake_builder)
+      stub_const("Partitia::Dev", fake_partitia_dev)
 
       expect(fake_builder).to receive(:command).with(:notif!)
       described_class.install!

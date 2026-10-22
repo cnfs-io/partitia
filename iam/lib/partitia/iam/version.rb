@@ -1,3 +1,5 @@
-module Iam
-  VERSION = "0.1.0"
+module Partitia
+  module Iam
+    VERSION = "0.1.0"
+  end
 end

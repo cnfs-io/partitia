@@ -73,7 +73,7 @@ namespace :db do
       #   ARTENANT=apple rails db:migrate:status:tenant  # one tenant
       desc "Migration status for tenant databases (set ARTENANT=<tenant> to filter to one)"
       task tenant: :load_config do
-        tenants = CnfsTenanted::MigrationStatus.tenant_names
+        tenants = Partitia::Tenanted::MigrationStatus.tenant_names
 
         if (filter = ENV["ARTENANT"].presence)
           unless tenants.include?(filter)
@@ -88,7 +88,7 @@ namespace :db do
         end
 
         tenants.each do |t|
-          CnfsTenanted::MigrationStatus.print(t)
+          Partitia::Tenanted::MigrationStatus.print(t)
           puts
         end
       end

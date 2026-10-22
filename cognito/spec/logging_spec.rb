@@ -5,18 +5,18 @@ require "rails_helper"
 # level routing across all four levels, redaction of token/code/client_secret,
 # block-form laziness, and the default-level silence contract. Reuses the
 # existing WebMock OIDC harness — no container, no network.
-RSpec.describe "cnfs_cognito diagnostic logging", :logs do
+RSpec.describe "partitia_cognito diagnostic logging", :logs do
   before { stub_oidc_discovery }
 
   describe "provider tag correctness" do
-    # The regression guard: CnfsCognito::Providers::Oidc is three namespaces
+    # The regression guard: Partitia::Cognito::Providers::Oidc is three namespaces
     # deep, yet component_tag collapses it to the flat gem tag. No
-    # cnfs_cognito/providers tag can occur.
-    it "tags a nested-provider line [cnfs_cognito]" do
+    # partitia/cognito/providers tag can occur.
+    it "tags a nested-provider line [partitia_cognito]" do
       oidc_provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
 
       expect(captured_log.messages).not_to be_empty
-      expect(captured_log.messages).to all(start_with("[cnfs_cognito]"))
+      expect(captured_log.messages).to all(start_with("[partitia_cognito]"))
       expect(captured_log.joined).to include("discovery: fetching")
     end
   end
@@ -27,7 +27,7 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
 
       expect do
         oidc_provider.authorization_url(redirect_uri: "https://h/cb", state: "s", nonce: "n", code_challenge: "c")
-      end.to raise_error(CnfsCognito::Providers::VerificationError)
+      end.to raise_error(Partitia::Cognito::Providers::VerificationError)
 
       expect(captured_log.at(:error).join("\n")).to match(%r{http GET .+ -> 500})
     end
@@ -36,7 +36,7 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
       token = id_token(nonce: "real-nonce")
 
       expect { oidc_provider.verify(id_token: token, nonce: "different-nonce") }
-        .to raise_error(CnfsCognito::Providers::VerificationError)
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
 
       expect(captured_log.at(:warn).join("\n")).to include("verify failed")
       expect(captured_log.at(:error)).to be_empty
@@ -61,8 +61,8 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
 
   describe "block-form laziness" do
     it "does not evaluate a debug block when the tag level is info" do
-      CnfsSupport::Logging.levels["cnfs_cognito"] = :info
-      logger = CnfsSupport::Logging.build_for("CnfsCognito::Providers::Oidc")
+      Partitia::Support::Logging.levels["partitia_cognito"] = :info
+      logger = Partitia::Support::Logging.build_for("Partitia::Cognito::Providers::Oidc")
 
       expect { logger.debug { raise "block must not be evaluated at :info" } }.not_to raise_error
     end
@@ -72,9 +72,9 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
   # declare it explicitly here since this file is not under spec/requests.
   describe "sessions controller", type: :request do
     before do
-      CnfsCognito.provider = oidc_provider
-      CnfsCognito.after_sign_in_path = "/home"
-      CnfsCognito.after_sign_out_path = "/home"
+      Partitia::Cognito.provider = oidc_provider
+      Partitia::Cognito.after_sign_in_path = "/home"
+      Partitia::Cognito.after_sign_out_path = "/home"
     end
 
     def start_login(params = {})
@@ -82,19 +82,19 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
       Rack::Utils.parse_query(URI(response.location).query)
     end
 
-    it "logs sign-in ok at info under [cnfs_cognito], id only" do
-      CnfsCognito.identity_resolver = ->(*) { FakeResult.new(true, FakePrincipal.new(4242), nil) }
+    it "logs sign-in ok at info under [partitia_cognito], id only" do
+      Partitia::Cognito.identity_resolver = ->(*) { FakeResult.new(true, FakePrincipal.new(4242), nil) }
       q = start_login
       stub_token_endpoint(id_token: id_token(nonce: q["nonce"]))
 
       get "/auth/callback", params: { code: "auth-code", state: q["state"] }
 
       expect(captured_log.at(:info).join("\n")).to include("sign-in ok: principal id=4242")
-      expect(captured_log.tagged("cnfs_cognito")).to include(a_string_matching(/sign-in ok/))
+      expect(captured_log.tagged("partitia_cognito")).to include(a_string_matching(/sign-in ok/))
     end
 
     it "logs a state mismatch at warn" do
-      CnfsCognito.identity_resolver = ->(*) { raise "resolver must not be called" }
+      Partitia::Cognito.identity_resolver = ->(*) { raise "resolver must not be called" }
       start_login
 
       get "/auth/callback", params: { code: "c", state: "wrong-state" }
@@ -104,10 +104,10 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
 
     it "never logs the id_token, code, or client_secret across the callback + exchange" do
       secret_sentinel = "sentinel-client-secret"
-      CnfsCognito.provider = CnfsCognito::Providers::Oidc.new(
+      Partitia::Cognito.provider = Partitia::Cognito::Providers::Oidc.new(
         issuer: OidcHelpers::ISSUER, client_id: OidcHelpers::CLIENT_ID, client_secret: secret_sentinel
       )
-      CnfsCognito.identity_resolver = ->(*) { FakeResult.new(true, FakePrincipal.new(1), nil) }
+      Partitia::Cognito.identity_resolver = ->(*) { FakeResult.new(true, FakePrincipal.new(1), nil) }
 
       q = start_login
       token = id_token(nonce: q["nonce"])
@@ -122,15 +122,15 @@ RSpec.describe "cnfs_cognito diagnostic logging", :logs do
     end
 
     it "at :info a happy callback emits only the info ledger, no debug spam" do
-      CnfsSupport::Logging.levels[:default] = :info
-      CnfsCognito.identity_resolver = ->(*) { FakeResult.new(true, FakePrincipal.new(7), nil) }
+      Partitia::Support::Logging.levels[:default] = :info
+      Partitia::Cognito.identity_resolver = ->(*) { FakeResult.new(true, FakePrincipal.new(7), nil) }
       q = start_login
       stub_token_endpoint(id_token: id_token(nonce: q["nonce"]))
 
       get "/auth/callback", params: { code: "c", state: q["state"] }
 
       expect(captured_log.at(:debug)).to be_empty
-      expect(captured_log.at(:info)).to contain_exactly("[cnfs_cognito] sign-in ok: principal id=7")
+      expect(captured_log.at(:info)).to contain_exactly("[partitia_cognito] sign-in ok: principal id=7")
     end
   end
 end

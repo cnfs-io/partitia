@@ -7,7 +7,7 @@ require "rails"
 require "action_controller/railtie"
 require "action_view/railtie"
 
-# Require the gems listed in the Gemfile (loads cnfs_cognito + its engine).
+# Require the gems listed in the Gemfile (loads partitia-cognito + its engine).
 Bundler.require(*Rails.groups)
 
 module Dummy
@@ -16,7 +16,7 @@ module Dummy
 
     config.eager_load = false
     # Cookie-based session/flash signing for the OIDC state/nonce/PKCE stash.
-    config.secret_key_base = "cnfs-cognito-dummy-secret-key-base-not-a-secret"
+    config.secret_key_base = "partitia-cognito-dummy-secret-key-base-not-a-secret"
 
     config.autoload_lib(ignore: %w[assets tasks])
 

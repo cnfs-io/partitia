@@ -1,4 +1,4 @@
 # desc "Explaining what the task does"
-# task :cnfs_telemetry do
+# task "partitia:telemetry:example" do
 #   # Task goes here
 # end

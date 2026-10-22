@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe CnfsCognito::Providers::Registry do
+RSpec.describe Partitia::Cognito::Providers::Registry do
   it "registers and fetches a provider by name" do
     provider = Object.new
     described_class.register(:authentik, provider)
@@ -9,6 +9,6 @@ RSpec.describe CnfsCognito::Providers::Registry do
   end
 
   it "raises for an unknown provider name" do
-    expect { described_class.fetch(:nope) }.to raise_error(CnfsCognito::ConfigurationError)
+    expect { described_class.fetch(:nope) }.to raise_error(Partitia::Cognito::ConfigurationError)
   end
 end

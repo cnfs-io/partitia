@@ -1,4 +1,4 @@
-# Iam
+# Partitia::Iam
 Short description and motivation.
 
 ## Usage
@@ -8,7 +8,7 @@ How to use my plugin.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem "iam"
+gem "partitia-iam"
 ```
 
 And then execute:

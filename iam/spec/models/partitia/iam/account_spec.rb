@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Iam::Account do
+RSpec.describe Partitia::Iam::Account do
   describe "singleton enforcement" do
     it ".instance is idempotent and always the id=1 row" do
       first = described_class.instance(name: "Acme")
@@ -42,6 +42,6 @@ RSpec.describe Iam::Account do
   end
 
   it "has a working factory" do
-    expect(create(:iam_account)).to be_persisted
+    expect(create(:partitia_iam_account)).to be_persisted
   end
 end

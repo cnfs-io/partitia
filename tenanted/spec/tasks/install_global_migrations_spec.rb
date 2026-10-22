@@ -3,22 +3,22 @@ require "rake"
 require "tmpdir"
 require "fileutils"
 
-# Spec for the `cnfs_tenanted:install:global_migrations` rake task.
+# Spec for the `partitia:tenanted:install:global_migrations` rake task.
 #
 # The task copies GLOBAL migrations (the non-standard db/global_migrate scope
 # that Rails' own install:migrations tasks don't see) from every registered
-# engine's CnfsSupport.migrations_paths[:global] into the host's
+# engine's Partitia::Support.migrations_paths[:global] into the host's
 # db/global_migrate. Here we drive both the source (a controlled fixture dir)
 # and the destination (a tmpdir) so the real dummy tree is never touched.
-RSpec.describe "cnfs_tenanted:install:global_migrations", type: :task do
+RSpec.describe "partitia:tenanted:install:global_migrations", type: :task do
   # Load the app's rake tasks once (they include lib/tasks/*.rake via the
   # engine), then re-enable the task before each example so it can run again —
   # rake tasks execute at most once per process by default.
   before(:all) do
-    Rails.application.load_tasks unless Rake::Task.task_defined?("cnfs_tenanted:install:global_migrations")
+    Rails.application.load_tasks unless Rake::Task.task_defined?("partitia:tenanted:install:global_migrations")
   end
 
-  let(:task) { Rake::Task["cnfs_tenanted:install:global_migrations"] }
+  let(:task) { Rake::Task["partitia:tenanted:install:global_migrations"] }
 
   # A tmp destination standing in for the host's db/global_migrate, and a tmp
   # source dir shaped like <engine_root>/db/global_migrate so the task's
@@ -41,7 +41,7 @@ RSpec.describe "cnfs_tenanted:install:global_migrations", type: :task do
 
     # Point the task at our fixtures: it reads the source list from the registry
     # and computes the destination from Rails.root + the :global search path.
-    allow(CnfsSupport).to receive(:migrations_paths)
+    allow(Partitia::Support).to receive(:migrations_paths)
       .and_return(global: [ source_dir.to_s ])
     allow(Rails).to receive(:root).and_return(tmp_root.join("host"))
     # migrations_paths_for.fetch(:global) -> "db/global_migrate" (real value is
@@ -78,7 +78,7 @@ RSpec.describe "cnfs_tenanted:install:global_migrations", type: :task do
 
   context "when no global migrations are registered" do
     before do
-      allow(CnfsSupport).to receive(:migrations_paths).and_return(global: nil)
+      allow(Partitia::Support).to receive(:migrations_paths).and_return(global: nil)
     end
 
     it "no-ops without creating the destination" do

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-# Piece 6: Iam::Current + Iam::Authenticatable, driven through the dummy's
+# Piece 6: Partitia::Iam::Current + Partitia::Iam::Authenticatable, driven through the dummy's
 # ProbeController.
 RSpec.describe "authentication", type: :request do
   it "treats a request with no session as anonymous" do
@@ -9,7 +9,7 @@ RSpec.describe "authentication", type: :request do
   end
 
   it "resolves the principal from the session id" do
-    principal = Iam::HumanPrincipal.create!(name: "alice")
+    principal = Partitia::Iam::HumanPrincipal.create!(name: "alice")
     post "/sign_in", params: { id: principal.id }
 
     get "/whoami"
@@ -29,7 +29,7 @@ RSpec.describe "authentication", type: :request do
     end
 
     it "allows an authenticated request" do
-      principal = Iam::HumanPrincipal.create!(name: "alice")
+      principal = Partitia::Iam::HumanPrincipal.create!(name: "alice")
       post "/sign_in", params: { id: principal.id }
 
       get "/protected"

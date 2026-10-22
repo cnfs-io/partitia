@@ -1,5 +1,5 @@
 en:
-  cnfs_cognito:
+  partitia_cognito:
     sessions:
       failures:
         default: "Sign-in could not be completed. Please try again."

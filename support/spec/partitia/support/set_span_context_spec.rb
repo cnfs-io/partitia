@@ -3,8 +3,8 @@ require "spec_helper"
 # .set_span_context enriches the currently-active span with attributes, reached
 # only through a runtime `defined?(OpenTelemetry)` probe (same charter as the
 # log↔trace bridge: zero load-time OTel coupling). Proven here against a real SDK
-# span via OtelSpanCapture rather than pulling cnfs_telemetry into this suite.
-RSpec.describe CnfsSupport::Instrumentable, ".set_span_context" do
+# span via OtelSpanCapture rather than pulling partitia-telemetry into this suite.
+RSpec.describe Partitia::Support::Instrumentable, ".set_span_context" do
   before { OtelSpanCapture.reset! }
 
   def last_span_attributes

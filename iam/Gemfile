@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in iam.gemspec.
+# Specify your gem's dependencies in partitia-iam.gemspec.
 gemspec
 
 gem "puma"
@@ -27,7 +27,7 @@ end
 gem "amazing_print"
 gem "pry-rails"
 
-gem "cnfs_support", path: "../support"
-gem "cnfs_dev", path: "../dev"
-gem "cnfs_telemetry", path: "../telemetry"
-# gem "cnfs_tenanted", path: "../tenanted"
+gem "partitia-support", path: "../support"
+gem "partitia-dev", path: "../dev"
+gem "partitia-telemetry", path: "../telemetry"
+# gem "partitia-tenanted", path: "../tenanted"

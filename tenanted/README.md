@@ -1,4 +1,4 @@
-# CnfsTenanted
+# Partitia::Tenanted
 
 Multi-tenant support for CNFS Rails apps, built on
 [activerecord-tenanted](https://github.com/basecamp/activerecord-tenanted)
@@ -41,7 +41,7 @@ Read this before installing — the installer is invasive.
 
 ```ruby
 # Gemfile
-gem "cnfs_tenanted"
+gem "partitia-tenanted"
 gem "activerecord-tenanted"   # the underlying per-tenant DB engine
 ```
 
@@ -49,27 +49,27 @@ gem "activerecord-tenanted"   # the underlying per-tenant DB engine
 bundle install
 ```
 
-> `cnfs_tenanted` depends on `cnfs_support` (a lean foundation gem) automatically.
-> The optional console helpers activate only if you also use `cnfs_dev` in
+> `partitia-tenanted` depends on `partitia-support` (a lean foundation gem) automatically.
+> The optional console helpers activate only if you also use `partitia-dev` in
 > development/test — they are not required.
 
 ### 2. Run the installer
 
 ```bash
-bin/rails generate cnfs_tenanted:install
+bin/rails generate partitia:tenanted:install
 ```
 
 This wires your app for multi-tenancy. Specifically, it:
 
 - calls `tenanted` in `app/models/application_record.rb` (every
   `ApplicationRecord` model becomes tenant-scoped);
-- includes `CnfsTenanted::TenantResolution` in your `ApplicationController`
+- includes `Partitia::Tenanted::TenantResolution` in your `ApplicationController`
   (resolves the tenant from the request subdomain);
 - rewrites `config/database.yml` (tenanted `tenant` + plain `global` DB);
 - sets `config.action_dispatch.tld_length = 0` in development so
   `*.localhost` subdomains resolve;
 - creates thin host controllers
-  (`TenantsController < CnfsTenanted::TenantsController`, likewise for accounts)
+  (`TenantsController < Partitia::Tenanted::TenantsController`, likewise for accounts)
   so routes resolve in your namespace and you can customize later;
 - creates `storage/tenants/` for the per-tenant database files;
 - runs `db:migrate` to create the **global** database (the tenant registry).
@@ -102,7 +102,7 @@ bin/rails console
 ```
 
 ```ruby
-Tenant.create!(name: "Acme", subdomain: "acme")
+Partitia::Tenanted::Tenant.create!(name: "Acme", subdomain: "acme")
 
 # The real test — does the tenant DB exist, is it migrated, and was its
 # Account settings singleton seeded with the tenant's name?
@@ -149,15 +149,15 @@ When a `Tenant` is created, its database is provisioned and its `Account`
 singleton is seeded with the tenant's name. The two names then diverge freely —
 the admin manages the `Tenant`, the tenant manages their `Account`.
 
-### Console helpers (with `cnfs_dev`)
+### Console helpers (with `partitia-dev`)
 
-If `cnfs_dev` is loaded, the console gains:
+If `partitia-dev` is loaded, the console gains:
 
 ```ruby
 vst "acme"   # switch the console into the acme tenant's database context
 vst          # clear back to the global/untenanted context
 
-t            # => Tenant ;   ta / tc / tf / tl  (all / create / find / last)
+t            # => Partitia::Tenanted::Tenant ;   ta / tc / tf / tl  (all / create / find / last)
 a            # => Account ;  aa / ac / af / al
 ```
 
@@ -188,7 +188,7 @@ Your app already has thin host controllers from the installer. Override actions
 there (call `super` or replace entirely):
 
 ```ruby
-class TenantsController < CnfsTenanted::TenantsController
+class TenantsController < Partitia::Tenanted::TenantsController
   def index
     super
     # ...your additions
@@ -202,9 +202,9 @@ Copy a resource's views into your app, where they take precedence over the
 gem's:
 
 ```bash
-bin/rails generate cnfs_tenanted:views tenants    # just tenant views
-bin/rails generate cnfs_tenanted:views accounts   # just account views
-bin/rails generate cnfs_tenanted:views            # both
+bin/rails generate partitia:tenanted:views tenants    # just tenant views
+bin/rails generate partitia:tenanted:views accounts   # just account views
+bin/rails generate partitia:tenanted:views            # both
 ```
 
 Once ejected, those views are yours; the gem's copies are no longer used for
@@ -233,15 +233,15 @@ Each database points at a normal path in your app (`db/migrate`,
 migrations in the standard Rails way, then version them like any others:
 
 ```bash
-bin/rails cnfs_tenanted:install:migrations          # TENANT migrations (db/migrate)
+bin/rails partitia_tenanted:install:migrations          # TENANT migrations (db/migrate)
 bin/rails railties:install:migrations               # every mounted engine's tenant migrations
-bin/rails cnfs_tenanted:install:global_migrations   # GLOBAL migrations (db/global_migrate)
+bin/rails partitia:tenanted:install:global_migrations   # GLOBAL migrations (db/global_migrate)
 ```
 
 The first two are Rails' own engine-migration tasks; they only see the standard
 `db/migrate` path, so they copy the **tenant** migrations. The **global**
 migrations live under the non-standard `db/global_migrate` scope that Rails
-doesn't know about, so `cnfs_tenanted:install:global_migrations` fills that gap
+doesn't know about, so `partitia:tenanted:install:global_migrations` fills that gap
 — it copies the global migrations of *every* registered CNFS engine into
 `db/global_migrate` in one run. All three are idempotent (re-running skips
 migrations already copied).
@@ -251,13 +251,13 @@ engine-migration workflow, and it's the stable choice for released apps.
 
 ### Opt-in: in-place (read straight from the gems)
 
-Uncomment the `CnfsSupport.migrations_paths[...]` line under a database (and
+Uncomment the `Partitia::Support.migrations_paths[...]` line under a database (and
 comment its hardcoded path) to have that database read migrations directly from
 the gems — nothing copied. Each gem's paths are collected into
-`CnfsSupport.migrations_paths` at boot, keyed by scope (`:tenant` → `db/migrate`,
-`:global` → `db/global_migrate`, declared by `cnfs_tenanted`'s engine). A
+`Partitia::Support.migrations_paths` at boot, keyed by scope (`:tenant` → `db/migrate`,
+`:global` → `db/global_migrate`, declared by `partitia-tenanted`'s engine). A
 migration added to any CNFS gem is then picked up on `bundle update` with no
-re-copy, across every CNFS engine that ships migrations (e.g. `cnfs_okf`) at
+re-copy, across every CNFS engine that ships migrations (e.g. `partitia_okf`) at
 once. Useful during rapid co-development across several gems and apps.
 
 The presence of that ERB is the whole switch — there is no separate config flag.
@@ -275,8 +275,8 @@ The presence of that ERB is the whole switch — there is no separate config fla
 - **`tld_length = 0` is development-only.** It makes `acme.localhost` resolve as
   subdomain `acme`. Production subdomain resolution relies on real DNS and the
   default `tld_length`.
-- **`cnfs_dev` is optional and not a dependency.** Multi-tenancy and the Pry
-  console helpers are independent; the helpers simply activate if `cnfs_dev`
+- **`partitia-dev` is optional and not a dependency.** Multi-tenancy and the Pry
+  console helpers are independent; the helpers simply activate if `partitia-dev`
   happens to be present.
 
 ---

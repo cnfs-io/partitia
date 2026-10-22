@@ -21,7 +21,7 @@ RSpec.configure do |config|
   # The broker's configuration + provider registry are process-level singletons;
   # reset them between examples so nothing leaks (order is randomized).
   config.before do
-    CnfsCognito.reset_configuration!
-    CnfsCognito::Providers::Registry.clear!
+    Partitia::Cognito.reset_configuration!
+    Partitia::Cognito::Providers::Registry.clear!
   end
 end

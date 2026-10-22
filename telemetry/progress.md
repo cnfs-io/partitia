@@ -1,4 +1,4 @@
-# cnfs_telemetry — progress log
+# partitia-telemetry — progress log
 
 Append-only. Newest at the bottom.
 
@@ -7,7 +7,7 @@ Append-only. Newest at the bottom.
 ## Bootstrap — notification->span bridge, generator, first okf target
 
 **Design** — the ratified notification-bridge (not CC's direct-tracer mixin,
-which was removed from cnfs_support). Every CNFS gem emits plain
+which was removed from partitia-support). Every CNFS gem emits plain
 `ActiveSupport::Notifications` events under a tag-prefixed name
 (`okf.bundle.create`); this gem is the ONLY place that knows OpenTelemetry. It
 subscribes to those prefixes and turns each event into a span on the OTel API
@@ -16,33 +16,33 @@ tracer. Depends on `opentelemetry-api` + `opentelemetry-semantic_conventions` +
 
 **What shipped**
 
-- `lib/cnfs_telemetry.rb` — `CnfsTelemetry.install!` / `uninstall!` / `prefixes`
+- `lib/partitia/telemetry.rb` — `Partitia::Telemetry.install!` / `uninstall!` / `prefixes`
   (default `%w[cnfs okf chorus iam]`). Idempotent install.
-- `lib/cnfs_telemetry/subscriber.rb` — the bridge. Object-form AS::N subscriber:
+- `lib/partitia/telemetry/subscriber.rb` — the bridge. Object-form AS::N subscriber:
   opens a span in `#start`, attaches it to the OTel context (so nested events and
   host Rack/Rails auto-instrumentation nest correctly), closes it in `#finish`.
   Event name = span name; first dotted segment = tracer name (matches
-  CnfsSupport::Logging's component tag). Payload entries become
+  Partitia::Support::Logging's component tag). Payload entries become
   `<event>.<key>` attributes; `:exception`/`:exception_object` mark span error.
-- `lib/cnfs_telemetry/railtie.rb` — calls `install!` after
+- `lib/partitia/telemetry/railtie.rb` — calls `install!` after
   `:load_config_initializers` so a host initializer can tweak `prefixes` first.
-- `lib/generators/cnfs_telemetry/install/` — `rails g cnfs_telemetry:install`
+- `lib/generators/partitia/telemetry/install/` — `rails g partitia:telemetry:install`
   ejects `config/initializers/opentelemetry.rb` (app-owned SDK config + exporter
   + `install!`) and a `telemetry/` compose stack (ported verbatim from
-  cnfs_support's proven `doc/plans/stack/`: collector→tempo←grafana, up.sh/down.sh
+  partitia-support's proven `doc/plans/stack/`: collector→tempo←grafana, up.sh/down.sh
   with apple|podman runtime selection). `--stack_dir` overrides the eject dir.
 - `spec/` — RSpec harness + `support/otel_sdk.rb` (in-memory SDK capture, moved
-  from cnfs_support). `subscriber_spec.rb` covers: no-op path, span emission,
+  from partitia-support). `subscriber_spec.rb` covers: no-op path, span emission,
   attribute folding, tracer naming, nesting, error status, prefix scoping.
 
-**Emit side proven target** — `cnfs_okf`'s `Bundle#create_concepts` (the
+**Emit side proven target** — `partitia_okf`'s `Bundle#create_concepts` (the
 `after_create` callback) now wraps its work in
 `ActiveSupport::Notifications.instrument("okf.bundle.create", ...)`, adding a
 `concept_count` to the payload. No OTel dep added to okf.
 
-**Removed from cnfs_support** — `lib/cnfs_support/instrumentation.rb`, its spec,
+**Removed from partitia-support** — `lib/partitia/support/instrumentation.rb`, its spec,
 the OTel gemspec deps, and the `require`. Logging stays (correctly placed, no
-OTel). Dead files parked in `cnfs_support/.trash/` pending `rm`. The original
+OTel). Dead files parked in `partitia/support/.trash/` pending `rm`. The original
 `doc/plans/stack/` remains as reference until the ejected copy is verified live.
 
 **NOT yet verified live** — the suite and the end-to-end span-in-Grafana path
@@ -56,50 +56,50 @@ is wanted instead, `prefixes` and `tracer_for`'s split change.
 
 ---
 
-## Naming convention resolved + emit ceremony moved to cnfs_support
+## Naming convention resolved + emit ceremony moved to partitia-support
 
 **Suite passing** on the first bootstrap (user ran it). Then two changes:
 
-**1. component_tag refactor (user).** `CnfsSupport.component_tag` now returns
-`deconstantize.underscore`, so `"CnfsOkf::Bundle"` => `"cnfs_okf"` (the module,
+**1. component_tag refactor (user).** `Partitia::Support.component_tag` now returns
+`deconstantize.underscore`, so `"Partitia::Okf::Bundle"` => `"partitia_okf"` (the module,
 not a bare first segment). This exposed that the telemetry subscriber never
 actually used that seam — it re-split the event name — and that the two derived
 different identifiers. Resolved by standardizing the whole family on one
-convention: **`<component>.<class>.<verb>`**, e.g. `cnfs_okf.bundle.create`.
+convention: **`<component>.<class>.<verb>`**, e.g. `partitia_okf.bundle.create`.
 
-**2. New `CnfsSupport::Instrumentable` concern owns the notification ceremony.**
-Emitters no longer hand-type event names. `include CnfsSupport::Instrumentable`
+**2. New `Partitia::Support::Instrumentable` concern owns the notification ceremony.**
+Emitters no longer hand-type event names. `include Partitia::Support::Instrumentable`
 then `instrument(:create, **payload) { ... }`; the concern composes the name from
 `self.class` — `component_tag(name)` for the component (so it matches the log
 tag by construction) + demodulized-underscored class + the explicit verb. Verb is
 explicit, NOT sniffed from `caller` (unreliable inside AR callbacks/blocks —
 reads `"block in ..."`). Instance + class-level entry points. Lives in
-cnfs_support (no OTel dep on emitters); spec added.
+partitia-support (no OTel dep on emitters); spec added.
 
-**Ripple changes in cnfs_telemetry:**
+**Ripple changes in partitia-telemetry:**
 - `prefixes` default `%w[cnfs okf chorus iam]` -> `%w[cnfs]`. Single prefix now
   covers the family because every component underscores to `cnfs_*`.
 - **Prefix-matcher bug fixed.** Old matcher `/\Acnfs(\.|\z)/` did NOT match
-  `cnfs_okf.bundle.create` — the `_` after `cnfs` is neither `.` nor end. New
+  `partitia_okf.bundle.create` — the `_` after `cnfs` is neither `.` nor end. New
   matcher `/\Acnfs[^.]*(\.|\z)/` matches the whole first segment regardless of
   the underscored tail. Spec added to guard this exact case.
 - `tracer_for` unchanged in logic (still first dotted segment) but now yields
-  `cnfs_okf` because the segment itself changed. Comments/README updated.
+  `partitia_okf` because the segment itself changed. Comments/README updated.
 - Subscriber spec rewritten to the new naming.
 
-**okf Bundle** now uses `include CnfsSupport::Instrumentable` +
+**okf Bundle** now uses `include Partitia::Support::Instrumentable` +
 `instrument(:create, ...)` instead of the hand-typed
 `ActiveSupport::Notifications.instrument("okf.bundle.create", ...)`.
 
 **Generator now ejects a durable README** into the stack dir (spin-up, the
 Grafana-won't-boot caveat, and the curl->collector + Tempo `/api/traces`
-readback fallback, ported from cnfs_support's proven progress notes). Post-
+readback fallback, ported from partitia-support's proven progress notes). Post-
 install output points at it instead of dumping steps that scroll away. Top-level
 gem README replaced (was boilerplate) with architecture + emit/install docs.
 
 **NOT yet verified live after these changes** — suite needs a re-run (both gems);
 end-to-end span path unchanged in shape but the event name is now
-`cnfs_okf.bundle.create`.
+`partitia_okf.bundle.create`.
 
 ---
 
@@ -113,27 +113,27 @@ matches any first segment merely starting with `cnfs` (e.g. `cnfsxyz`) — accep
 as harmless for a closed gem family. Strict alternative `(_[^.]+)?(\.|\z)` noted
 but not taken, per user.
 
-**2. `CnfsSupport::Model` meta-concern (new).** `lib/cnfs_support/model.rb` — an
+**2. `Partitia::Support::Model` meta-concern (new).** `lib/partitia/support/model.rb` — an
 ActiveSupport::Concern bundling `Logging` + `Instrumentable`, so a gem/app
 `ApplicationRecord` includes ONE thing:
 
     class ApplicationRecord < ActiveRecord::Base
-      include CnfsSupport::Model
+      include Partitia::Support::Model
     end
 
-Applied to `cnfs_okf`'s ApplicationRecord (replacing its bare
-`include CnfsSupport::Logging`); removed the now-redundant
-`include CnfsSupport::Instrumentable` from `Bundle` (inherited via base). New
+Applied to `partitia_okf`'s ApplicationRecord (replacing its bare
+`include Partitia::Support::Logging`); removed the now-redundant
+`include Partitia::Support::Instrumentable` from `Bundle` (inherited via base). New
 concerns get added to Model once and all consumers pick them up. Spec added.
 
-**3. Console `debug!` toggle (new).** `lib/cnfs_telemetry/pry_console.rb` —
-`CnfsTelemetry::PryConsole.toggle!` attaches/detaches a subscriber that logs
+**3. Console `debug!` toggle (new).** `lib/partitia/telemetry/pry_console.rb` —
+`Partitia::Telemetry::PryConsole.toggle!` attaches/detaches a subscriber that logs
 every cnfs notification as published. Wholly independent of the OTel bridge /
 SDK / collector / container: it is the "are my events firing?" probe. Registered
-as a bare console command via cnfs_dev's `CnfsDev.console { |c| c.command(:debug!)
-{ ... } }` DSL (guarded by `defined?(CnfsDev)` at the bottom of
-lib/cnfs_telemetry.rb, so no hard dep). In `single`'s Gemfile cnfs_dev loads
-before cnfs_telemetry, so the guard resolves. `debug!` toggles on/off and echoes
+as a bare console command via partitia-dev's `Partitia::Dev.console { |c| c.command(:debug!)
+{ ... } }` DSL (guarded by `defined?(Partitia::Dev)` at the bottom of
+lib/partitia/telemetry.rb, so no hard dep). In `single`'s Gemfile partitia-dev loads
+before partitia-telemetry, so the guard resolves. `debug!` toggles on/off and echoes
 state. Spec added. README section added.
 
 The debug tap uses a looser starts-with matcher than the bridge (intentional —

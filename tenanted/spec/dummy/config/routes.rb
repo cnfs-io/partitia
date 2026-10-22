@@ -11,7 +11,7 @@ Rails.application.routes.draw do
 
   # --- Plan 004 integration ---------------------------------------------------
   # The auth broker, mounted per Plan 003.
-  mount CnfsCognito::Engine => "/auth"
+  mount Partitia::Cognito::Engine => "/auth"
 
   # An operator route: authenticated (invite-only population) + one Pundit
   # policy with a fail-closed verify_authorized.

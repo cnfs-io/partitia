@@ -1,15 +1,15 @@
 require "rails_helper"
 
-# §2: the broker's SessionsController emits cnfs_cognito.sessions_controller.<verb>
+# §2: the broker's SessionsController emits partitia_cognito.sessions_controller.<verb>
 # notifications; #callback records the exact resolution outcome on its payload so
 # a login's success/failure reason is visible in the trace. Asserted at the
 # notification layer over the real request flow.
 RSpec.describe "broker sessions instrumentation", type: :request do
   before do
     stub_oidc_discovery
-    CnfsCognito.provider = oidc_provider
-    CnfsCognito.after_sign_in_path = "/home"
-    CnfsCognito.after_sign_out_path = "/home"
+    Partitia::Cognito.provider = oidc_provider
+    Partitia::Cognito.after_sign_in_path = "/home"
+    Partitia::Cognito.after_sign_out_path = "/home"
   end
 
   def start_login(params = {})
@@ -21,14 +21,14 @@ RSpec.describe "broker sessions instrumentation", type: :request do
     out = []
     callback = ->(_name, _start, _finish, _id, payload) { out << payload }
     ActiveSupport::Notifications.subscribed(
-      callback, "cnfs_cognito.sessions_controller.callback"
+      callback, "partitia_cognito.sessions_controller.callback"
     ) { yield }
     out
   end
 
   it "records outcome=success and the policy on a completed login" do
-    CnfsCognito.policy_resolver = ->(_request) { :jit }
-    CnfsCognito.identity_resolver =
+    Partitia::Cognito.policy_resolver = ->(_request) { :jit }
+    Partitia::Cognito.identity_resolver =
       ->(_assertion, _policy, _link) { FakeResult.new(true, FakePrincipal.new(4242), nil) }
 
     q = start_login
@@ -43,7 +43,7 @@ RSpec.describe "broker sessions instrumentation", type: :request do
   end
 
   it "records outcome=invalid_state and never exchanges the code on a bad state" do
-    CnfsCognito.identity_resolver = ->(*) { raise "resolver must not be called" }
+    Partitia::Cognito.identity_resolver = ->(*) { raise "resolver must not be called" }
     start_login
 
     payloads = callback_payloads do
@@ -54,7 +54,7 @@ RSpec.describe "broker sessions instrumentation", type: :request do
   end
 
   it "records outcome=verification_failed on a tampered token, leaking nothing" do
-    CnfsCognito.identity_resolver = ->(*) { raise "must not resolve" }
+    Partitia::Cognito.identity_resolver = ->(*) { raise "must not resolve" }
 
     q = start_login
     stub_token_endpoint(id_token: id_token(nonce: "tampered"))
@@ -67,7 +67,7 @@ RSpec.describe "broker sessions instrumentation", type: :request do
   end
 
   it "records the resolver failure reason as the outcome" do
-    CnfsCognito.identity_resolver = ->(*) { FakeResult.new(false, nil, "unknown_identity") }
+    Partitia::Cognito.identity_resolver = ->(*) { FakeResult.new(false, nil, "unknown_identity") }
 
     q = start_login
     stub_token_endpoint(id_token: id_token(nonce: q["nonce"]))
@@ -81,11 +81,11 @@ RSpec.describe "broker sessions instrumentation", type: :request do
 
   # The cardinality/PII guard over the controller spans: a completed login (which
   # resolves a principal and establishes a session) must leave no sensitive field
-  # on any cnfs_cognito span. Forbidden set read from the redaction config.
+  # on any partitia-cognito span. Forbidden set read from the redaction config.
   it "attaches no sensitive field to any span across a full login (list from RedactionConfig)" do
-    sensitive = CnfsSupport::RedactionConfig.sensitive_fields
-    CnfsCognito.policy_resolver = ->(_request) { :jit }
-    CnfsCognito.identity_resolver =
+    sensitive = Partitia::Support::RedactionConfig.sensitive_fields
+    Partitia::Cognito.policy_resolver = ->(_request) { :jit }
+    Partitia::Cognito.identity_resolver =
       ->(_assertion, _policy, _link) { FakeResult.new(true, FakePrincipal.new(4242), nil) }
 
     q = start_login
@@ -93,7 +93,7 @@ RSpec.describe "broker sessions instrumentation", type: :request do
 
     captured = []
     callback = ->(name, _s, _f, _id, payload) { captured << [ name, payload ] }
-    ActiveSupport::Notifications.subscribed(callback, /\Acnfs_cognito\./) do
+    ActiveSupport::Notifications.subscribed(callback, /\Apartitia_cognito\./) do
       get "/auth/callback", params: { code: "auth-code", state: q["state"] }
     end
 

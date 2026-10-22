@@ -17,7 +17,7 @@ RSpec.describe "integration: authentication", type: :request do
       expect(response.body).to start_with("dashboard: ")
 
       ApplicationRecord.with_tenant(handle_for("acme")) do
-        root = Iam::HumanPrincipal.find_by(root: true)
+        root = Partitia::Iam::HumanPrincipal.find_by(root: true)
         expect(root.identity_links.pluck(:issuer, :subject)).to eq([ [ OidcHelpers::ISSUER, "root-sub" ] ])
         expect(root.link_token_digest).to be_nil # consumed
       end
@@ -31,7 +31,7 @@ RSpec.describe "integration: authentication", type: :request do
       oidc_login(host: "acme.example.com", subject: "replayer", link_token: token)
 
       ApplicationRecord.with_tenant(handle_for("acme")) do
-        expect(Iam::IdentityLink.where(subject: "replayer")).to be_empty
+        expect(Partitia::Iam::IdentityLink.where(subject: "replayer")).to be_empty
       end
     end
   end
@@ -45,7 +45,7 @@ RSpec.describe "integration: authentication", type: :request do
       get "/dashboard"
       expect(response).to have_http_status(:unauthorized)
       ApplicationRecord.with_tenant(handle_for("acme")) do
-        expect(Iam::IdentityLink.where(subject: "stranger")).to be_empty
+        expect(Partitia::Iam::IdentityLink.where(subject: "stranger")).to be_empty
       end
     end
   end
@@ -61,17 +61,17 @@ RSpec.describe "integration: authentication", type: :request do
 
       first_id =
         ApplicationRecord.with_tenant(handle_for("acme")) do
-          principal = Iam::IdentityLink.find_by(subject: "enduser").principal
+          principal = Partitia::Iam::IdentityLink.find_by(subject: "enduser").principal
           expect(principal.email).to eq("e@acme.test")
-          expect(Iam::HumanPrincipal.where(root: false).count).to eq(1)
+          expect(Partitia::Iam::HumanPrincipal.where(root: false).count).to eq(1)
           principal.id
         end
 
       oidc_login(host: "acme.example.com", subject: "enduser", mode: :jit)
 
       ApplicationRecord.with_tenant(handle_for("acme")) do
-        expect(Iam::IdentityLink.where(subject: "enduser").count).to eq(1)
-        expect(Iam::IdentityLink.find_by(subject: "enduser").principal_id).to eq(first_id)
+        expect(Partitia::Iam::IdentityLink.where(subject: "enduser").count).to eq(1)
+        expect(Partitia::Iam::IdentityLink.find_by(subject: "enduser").principal_id).to eq(first_id)
       end
     end
   end

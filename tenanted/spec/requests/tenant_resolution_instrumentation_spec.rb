@@ -1,10 +1,10 @@
 require "rails_helper"
 
 # §1b: the switch_tenant around_action emits one
-# cnfs_tenanted.tenant_resolution.switch notification per request, whose payload
+# partitia_tenanted.tenant_resolution.switch notification per request, whose payload
 # makes the three resolution outcomes distinct (and carries the resolved handle).
 # Asserted at the notification layer — no OTel SDK needed — exactly what
-# cnfs_telemetry would turn into a span.
+# partitia-telemetry would turn into a span.
 RSpec.describe "tenant resolution instrumentation", type: :request do
   # Collect the payloads of every switch event fired during the block. Uses the
   # auto-unsubscribing block form so no subscriber leaks between examples.
@@ -12,7 +12,7 @@ RSpec.describe "tenant resolution instrumentation", type: :request do
     payloads = []
     callback = ->(_name, _start, _finish, _id, payload) { payloads << payload }
     ActiveSupport::Notifications.subscribed(
-      callback, "cnfs_tenanted.tenant_resolution.switch"
+      callback, "partitia_tenanted.tenant_resolution.switch"
     ) { yield }
     payloads
   end

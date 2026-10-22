@@ -1,8 +1,8 @@
-require_relative "lib/cnfs_tenanted/version"
+require_relative "lib/partitia/tenanted/version"
 
 Gem::Specification.new do |spec|
-  spec.name        = "cnfs_tenanted"
-  spec.version     = CnfsTenanted::VERSION
+  spec.name        = "partitia-tenanted"
+  spec.version     = Partitia::Tenanted::VERSION
   spec.authors     = [ "Robert Roach" ]
   spec.email       = [ "rjayroach@gmail.com" ]
   spec.homepage    = "TODO"
@@ -35,13 +35,13 @@ Gem::Specification.new do |spec|
 
   # Lean CNFS foundation: provides the pre-boot tenant migration-path registry
   # that this engine registers its db/migrate path with.
-  spec.add_dependency "cnfs_support"
+  spec.add_dependency "partitia-support"
 
   # This engine ships Tailwind-styled tenant/account views.
   spec.add_dependency "tailwindcss-rails"
 
-  # NOTE: cnfs_dev is intentionally NOT a dependency. The tenant-aware Pry
-  # console helpers activate only when cnfs_dev happens to be loaded
-  # (development/test), detected via defined?(CnfsDev). Multi-tenancy and
+  # NOTE: partitia-dev is intentionally NOT a dependency. The tenant-aware Pry
+  # console helpers activate only when partitia-dev happens to be loaded
+  # (development/test), detected via defined?(Partitia::Dev). Multi-tenancy and
   # console tooling are orthogonal; an app can use one without the other.
 end

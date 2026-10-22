@@ -12,7 +12,7 @@ default: &default
 development:
   <<: *default
   database: storage/development.sqlite3
-  migrations_paths: <%= CnfsSupport.migrations_paths[:primary] %>
+  migrations_paths: <%= Partitia::Support.migrations_paths[:primary] %>
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
@@ -20,7 +20,7 @@ development:
 test:
   <<: *default
   database: storage/test.sqlite3
-  migrations_paths: <%= CnfsSupport.migrations_paths[:primary] %>
+  migrations_paths: <%= Partitia::Support.migrations_paths[:primary] %>
 
 # SQLite3 write its data on the local filesystem, as such it requires
 # persistent disks. If you are deploying to a managed service, you should

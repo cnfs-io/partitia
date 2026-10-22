@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in cnfs_ui.gemspec.
+# Specify your gem's dependencies in partitia-ui.gemspec.
 gemspec
 
 gem "puma"
@@ -26,5 +26,5 @@ group :development do
   gem "ruby-lsp-rails", require: false
   gem "lookbook"
 end
-gem "cnfs_support", path: "../support"
-gem "cnfs_dev", path: "../dev"
+gem "partitia-support", path: "../support"
+gem "partitia-dev", path: "../dev"

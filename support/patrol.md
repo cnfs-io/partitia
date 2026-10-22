@@ -1,4 +1,4 @@
-# patrol.md — cnfs_support
+# patrol.md — partitia-support
 
 Append-only, newest entry on top. Written by `docs-patrol` / `docs-sheriff`.
 Baseline entry = the onboarding checkpoint the next patrol measures drift against.
@@ -20,21 +20,21 @@ drift score: 0
   `[medium]` docs↔plans claim, and one redaction-consumption flux entry
   (tracking plan 008).
 - Reconciled `README.md`: three stale tag/level-key strings said `okf` where the
-  live `component_tag` (asserted by green specs) yields `cnfs_okf` —
-  `Okf::Button → cnfs_okf`, "tag `cnfs_okf`", and `levels["cnfs_okf"]`. Fixed.
+  live `component_tag` (asserted by green specs) yields `partitia_okf` —
+  `Okf::Button → partitia_okf`, "tag `partitia_okf`", and `levels["partitia_okf"]`. Fixed.
 - Registered `support` in the area roster (`gems/CLAUDE.md` `#coherence`) so
   patrol fans out to it.
 - No gem-local `doc/plans` exist (build is space-driven via `../../doc/plans`);
   nothing to retire.
 
 ### code bugs — STOP (flagged, NOT fixed — needs a human)
-- `CnfsSupport.component_tag` (`lib/cnfs_support.rb:20`) raises `NoMethodError`
+- `Partitia::Support.component_tag` (`lib/partitia/support.rb:20`) raises `NoMethodError`
   (`undefined method 'underscore' for nil`) when given `nil` or `""`:
   `"".split("::").first` is `nil`, and `.underscore` is called on it with no
   guard. The method's own doc-comment (and the commented-out prior implementation
   just below it) promises nameless/anonymous classes fall back to `"cnfs"` — the
   current code does not. Reachable when an **anonymous** class
-  (`Class.new { include CnfsSupport::Logging }`, `self.class.name == nil`) calls
+  (`Class.new { include Partitia::Support::Logging }`, `self.class.name == nil`) calls
   `logger` or `instrument`. Note `Instrumentable.event_name` *does* guard the
   analogous empty case (`subject = "object" if subject.empty?`), so the missing
   guard in `component_tag` reads as an oversight, not a deliberate contract.
@@ -42,17 +42,17 @@ drift score: 0
   empty→`"cnfs"` fallback or document anonymous classes as unsupported.
 
 ### docs ↔ code comment (proposed, NOT applied — source file)
-- `lib/cnfs_support.rb:13-25`: the `component_tag` doc-comment still describes the
+- `lib/partitia/support.rb:13-25`: the `component_tag` doc-comment still describes the
   removed behavior (`"Okf::Button" => "okf"`, fallback `"cnfs"`) and the old
   implementation sits commented-out at lines 21-22. Reality (green specs) is the
-  cnfs-prefixed rule (`=> "cnfs_okf"`). Proposed: update the comment to the
-  cnfs-prefix rule and delete the dead commented lines. Not applied here because
+  partitia-prefixed rule (`=> "partitia_okf"`). Proposed: update the comment to the
+  partitia-prefix rule and delete the dead commented lines. Not applied here because
   it edits a source file — left for a human to sweep with the bug fix above.
 
 ### state (context, not scored)
 - uncommitted: 5 — `CLAUDE.md` (new, this onboarding), `README.md` (reconciled),
   `patrol.md` (this file, once saved), plus pre-existing untracked
-  `lib/cnfs_support/redaction_config.rb` + `spec/cnfs_support/redaction_config_spec.rb`
+  `lib/partitia/support/redaction_config.rb` + `spec/partitia/support/redaction_config_spec.rb`
   (plan 006 WS3, shipped-but-uncommitted). `Gemfile.lock` also modified: `bundle
   install` fetched the `opentelemetry-sdk`/`-common`/`-registry` dev/test gems
   that were missing locally so the suite could boot — an environment artifact, not

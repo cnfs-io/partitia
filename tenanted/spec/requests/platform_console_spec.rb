@@ -8,7 +8,7 @@ RSpec.describe "platform console guard", type: :request do
   end
 
   it "allows access when a permissive guard is configured" do
-    CnfsTenanted.platform_console_guard = -> { } # no render/redirect -> proceed
+    Partitia::Tenanted.platform_console_guard = -> { } # no render/redirect -> proceed
 
     get "/tenants", headers: { "HOST" => "example.com" }
 

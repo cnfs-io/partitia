@@ -1,6 +1,6 @@
 require "spec_helper"
 
-RSpec.describe CnfsSupport::Shell do
+RSpec.describe Partitia::Support::Shell do
   describe ".run" do
     it "returns a success result for a zero-exit command" do
       result = described_class.run("true")
@@ -47,7 +47,7 @@ RSpec.describe CnfsSupport::Shell do
     end
 
     it "injects environment overrides" do
-      result = described_class.run("sh", "-c", "echo $CNFS_SHELL_TEST", env: { "CNFS_SHELL_TEST" => "xyz" })
+      result = described_class.run("sh", "-c", "echo $PARTITIA_SHELL_TEST", env: { "PARTITIA_SHELL_TEST" => "xyz" })
 
       expect(result.stdout.strip).to eq("xyz")
     end
@@ -61,7 +61,7 @@ RSpec.describe CnfsSupport::Shell do
     end
 
     it "normalizes a missing binary into a failure result (127) rather than raising" do
-      result = described_class.run("cnfs_no_such_binary_xyz")
+      result = described_class.run("partitia_no_such_binary_xyz")
 
       expect(result).to be_failure
       expect(result.exitstatus).to eq(127)
@@ -79,9 +79,9 @@ RSpec.describe CnfsSupport::Shell do
   end
 
   describe ".run instrumentation" do
-    it "emits cnfs_support.shell.run with a secret-free payload" do
+    it "emits partitia_support.shell.run with a secret-free payload" do
       payload = nil
-      sub = ActiveSupport::Notifications.subscribe("cnfs_support.shell.run") { |*, pl| payload = pl }
+      sub = ActiveSupport::Notifications.subscribe("partitia_support.shell.run") { |*, pl| payload = pl }
 
       described_class.run("echo", "hi", cwd: "/tmp")
 
@@ -98,7 +98,7 @@ RSpec.describe CnfsSupport::Shell do
 
     it "redacts arguments from the payload when sensitive" do
       payload = nil
-      sub = ActiveSupport::Notifications.subscribe("cnfs_support.shell.run") { |*, pl| payload = pl }
+      sub = ActiveSupport::Notifications.subscribe("partitia_support.shell.run") { |*, pl| payload = pl }
 
       described_class.run("echo", "s3cr3t-token", sensitive: true)
 
@@ -188,7 +188,7 @@ RSpec.describe CnfsSupport::Shell do
     end
 
     it "normalizes a missing binary into a failure result (127)" do
-      result = described_class.stream("cnfs_no_such_binary_xyz") { |_| }
+      result = described_class.stream("partitia_no_such_binary_xyz") { |_| }
 
       expect(result).to be_failure
       expect(result.exitstatus).to eq(127)
@@ -214,7 +214,7 @@ RSpec.describe CnfsSupport::Shell do
 
     it "injects environment overrides" do
       lines = []
-      described_class.stream("sh", "-c", "echo $CNFS_SHELL_TEST", env: { "CNFS_SHELL_TEST" => "xyz" }) do |line|
+      described_class.stream("sh", "-c", "echo $PARTITIA_SHELL_TEST", env: { "PARTITIA_SHELL_TEST" => "xyz" }) do |line|
         lines << line
       end
 
@@ -249,9 +249,9 @@ RSpec.describe CnfsSupport::Shell do
   end
 
   describe ".stream instrumentation" do
-    it "emits cnfs_support.shell.stream with a secret-free payload" do
+    it "emits partitia_support.shell.stream with a secret-free payload" do
       payload = nil
-      sub = ActiveSupport::Notifications.subscribe("cnfs_support.shell.stream") { |*, pl| payload = pl }
+      sub = ActiveSupport::Notifications.subscribe("partitia_support.shell.stream") { |*, pl| payload = pl }
 
       described_class.stream("printf", "a\nb\n", cwd: "/tmp") { |_| }
 
@@ -269,7 +269,7 @@ RSpec.describe CnfsSupport::Shell do
 
     it "redacts arguments from the payload when sensitive" do
       payload = nil
-      sub = ActiveSupport::Notifications.subscribe("cnfs_support.shell.stream") { |*, pl| payload = pl }
+      sub = ActiveSupport::Notifications.subscribe("partitia_support.shell.stream") { |*, pl| payload = pl }
 
       described_class.stream("echo", "s3cr3t-token", sensitive: true) { |_| }
 

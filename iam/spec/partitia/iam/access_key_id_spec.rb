@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Iam::AccessKeyId do
+RSpec.describe Partitia::Iam::AccessKeyId do
   let(:handle) { "a7f3k2xy" }
 
   describe ".generate / .parse round-trip" do

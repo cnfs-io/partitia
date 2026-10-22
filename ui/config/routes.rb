@@ -1,2 +1,2 @@
-CnfsUi::Engine.routes.draw do
+Partitia::Ui::Engine.routes.draw do
 end

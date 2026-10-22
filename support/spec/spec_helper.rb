@@ -1,4 +1,4 @@
-require "cnfs_support"
+require "partitia/support"
 
 Dir[File.join(__dir__, "support", "**", "*.rb")].sort.each { |file| require file }
 
@@ -19,8 +19,8 @@ RSpec.configure do |config|
   # Logging keeps process-global state (backend, level registry). Reset before
   # every example so ordering never leaks configuration between specs.
   config.before do
-    CnfsSupport::Logging.reset!
-    CnfsSupport.reset_storage!
+    Partitia::Support::Logging.reset!
+    Partitia::Support.reset_storage!
     OtelSpanCapture.reset!
   end
 end

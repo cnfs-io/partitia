@@ -1,3 +1,5 @@
-module CnfsCognito
-  VERSION = "0.1.0"
+module Partitia
+  module Cognito
+    VERSION = "0.1.0"
+  end
 end

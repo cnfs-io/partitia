@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in cnfs_dev.gemspec.
+# Specify your gem's dependencies in partitia-dev.gemspec.
 gemspec
 
 gem "puma"

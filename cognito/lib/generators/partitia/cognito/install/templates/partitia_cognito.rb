@@ -1,9 +1,9 @@
-# cnfs_cognito configuration (authentication broker).
+# partitia-cognito configuration (authentication broker).
 #
 # Two distinct kinds of setting live here:
 #   * PROVIDER CONNECTION CONFIG — data (issuer, client_id, client_secret,
-#     scopes), read from CnfsCognito::Config. That subclass resolves each value
-#     from config/cnfs_cognito.yml → credentials.cnfs_cognito → ENV["CNFS_COGNITO_*"].
+#     scopes), read from Partitia::Cognito::Config. That subclass resolves each value
+#     from config/partitia_cognito.yml → credentials.partitia_cognito → ENV["PARTITIA_COGNITO_*"].
 #     Never inline a secret and never bare-fetch it from ENV here.
 #   * INVERSION SLOTS — callables the host wires (identity_resolver,
 #     policy_resolver, redirect paths). Two of them (provider, identity_resolver)
@@ -12,31 +12,31 @@
 # --- Provider (REQUIRED) --------------------------------------------------
 #
 # Register the Authentik (OIDC) provider and make it active. Its connection
-# values come from CnfsCognito::Config — set them where they belong:
+# values come from Partitia::Cognito::Config — set them where they belong:
 #
-#   * issuer / client_id — non-secret. Put them in config/cnfs_cognito.yml, or
-#     override with CNFS_COGNITO_ISSUER / CNFS_COGNITO_CLIENT_ID. Authentik's
+#   * issuer / client_id — non-secret. Put them in config/partitia_cognito.yml, or
+#     override with PARTITIA_COGNITO_ISSUER / PARTITIA_COGNITO_CLIENT_ID. Authentik's
 #     OIDC issuer is per-application:
 #         https://<authentik-host>/application/o/<app-slug>/
 #   * client_secret — SECRET. Put it in Rails credentials (never inline it):
 #         bin/rails credentials:edit
-#         cnfs_cognito:
+#         partitia_cognito:
 #           client_secret: <value>
-#     or supply CNFS_COGNITO_CLIENT_SECRET in the environment.
+#     or supply PARTITIA_COGNITO_CLIENT_SECRET in the environment.
 #
 # The redirect URI you register in Authentik is your engine mount + "/callback"
 # (e.g. http://localhost:3000/auth/callback).
-CnfsCognito::Providers::Registry.register(
+Partitia::Cognito::Providers::Registry.register(
   :authentik,
-  CnfsCognito::Providers::Authentik.new(
-    issuer:        CnfsCognito::Config.issuer,
-    client_id:     CnfsCognito::Config.client_id,
-    client_secret: CnfsCognito::Config.client_secret,
-    scopes:        CnfsCognito::Config.scopes
+  Partitia::Cognito::Providers::Authentik.new(
+    issuer:        Partitia::Cognito::Config.issuer,
+    client_id:     Partitia::Cognito::Config.client_id,
+    client_secret: Partitia::Cognito::Config.client_secret,
+    scopes:        Partitia::Cognito::Config.scopes
   )
 )
 
-CnfsCognito.provider = CnfsCognito::Providers::Registry.fetch(:authentik)
+Partitia::Cognito.provider = Partitia::Cognito::Providers::Registry.fetch(:authentik)
 
 # --- Identity resolver: the broker -> IAM seam (REQUIRED) -----------------
 #
@@ -44,8 +44,8 @@ CnfsCognito.provider = CnfsCognito::Providers::Registry.fetch(:authentik)
 # to #success?, #principal (which responds to #id), and #failure_reason
 # (ADR 0004). This is the ONE place the broker touches iam; the reference is
 # resolved lazily so the two gems stay independent (neither requires the other).
-CnfsCognito.identity_resolver = ->(assertion, policy, link_token) {
-  Iam::Resolution.resolve(assertion:, policy:, link_token:)
+Partitia::Cognito.identity_resolver = ->(assertion, policy, link_token) {
+  Partitia::Iam::Resolution.resolve(assertion:, policy:, link_token:)
 }
 
 # --- Policy resolver ------------------------------------------------------
@@ -54,13 +54,13 @@ CnfsCognito.identity_resolver = ->(assertion, policy, link_token) {
 # :invite_only — a login with no pre-existing invite link is rejected. A test
 # app usually wants JIT provisioning, where an unknown-but-verified Authentik
 # user gets a principal created on the spot:
-CnfsCognito.policy_resolver = ->(_request) { :jit }
+Partitia::Cognito.policy_resolver = ->(_request) { :jit }
 #
 # Fail-closed default (uncomment to require invites):
-# CnfsCognito.policy_resolver = ->(_request) { :invite_only }
+# Partitia::Cognito.policy_resolver = ->(_request) { :invite_only }
 #
 # Per-route policy (e.g. JIT only on a dedicated signup path):
-# CnfsCognito.policy_resolver = ->(request) {
+# Partitia::Cognito.policy_resolver = ->(request) {
 #   request.path.start_with?("/auth/login") ? :jit : :invite_only
 # }
 
@@ -68,12 +68,12 @@ CnfsCognito.policy_resolver = ->(_request) { :jit }
 #
 # Where to land after sign-in / sign-out. A string or a callable evaluated in
 # controller context. Both default to "/".
-# CnfsCognito.after_sign_in_path  = "/"
-# CnfsCognito.after_sign_out_path = "/"
+# Partitia::Cognito.after_sign_in_path  = "/"
+# Partitia::Cognito.after_sign_out_path = "/"
 
 # --- Session key (optional) -----------------------------------------------
 #
 # Holds the canonical principal id after a successful resolution. Must match
-# Iam.config.session_key (both default to :iam_user_id — leave alone unless you
+# Partitia::Iam.config.session_key (both default to :partitia_iam_user_id — leave alone unless you
 # change both).
-# CnfsCognito.session_key = :iam_user_id
+# Partitia::Cognito.session_key = :partitia_iam_user_id

@@ -1,4 +1,4 @@
-# Dev processes for the cnfs_cognito dummy. Start with: foreman start -f Procfile.dev
+# Dev processes for the partitia-cognito dummy. Start with: foreman start -f Procfile.dev
 #
 # The broker itself is a lean web process. The Authentik IdP is OPT-IN — a
 # developer not working on auth just runs `web` and never needs Docker. To bring

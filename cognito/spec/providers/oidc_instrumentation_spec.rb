@@ -1,10 +1,10 @@
 require "rails_helper"
 
-# The provider classes live 3 levels deep (CnfsCognito::Providers::Oidc), so
-# their instrument helper pins the flat "cnfs_cognito" component with the
-# concrete provider as subject — events are cnfs_cognito.oidc.<verb>. Asserted at
-# the notification layer (no OTel SDK); cnfs_telemetry turns these into spans.
-RSpec.describe CnfsCognito::Providers::Oidc, "instrumentation" do
+# The provider classes live 3 levels deep (Partitia::Cognito::Providers::Oidc), so
+# their instrument helper pins the flat "partitia_cognito" component with the
+# concrete provider as subject — events are partitia_cognito.oidc.<verb>. Asserted at
+# the notification layer (no OTel SDK); partitia-telemetry turns these into spans.
+RSpec.describe Partitia::Cognito::Providers::Oidc, "instrumentation" do
   subject(:provider) { oidc_provider }
 
   before { stub_oidc_discovery }
@@ -16,8 +16,8 @@ RSpec.describe CnfsCognito::Providers::Oidc, "instrumentation" do
     out
   end
 
-  it "emits cnfs_cognito.oidc.verify with issuer and outcome=verified, never the subject" do
-    payloads = payloads_for("cnfs_cognito.oidc.verify") do
+  it "emits partitia_cognito.oidc.verify with issuer and outcome=verified, never the subject" do
+    payloads = payloads_for("partitia_cognito.oidc.verify") do
       provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
     end
 
@@ -36,15 +36,15 @@ RSpec.describe CnfsCognito::Providers::Oidc, "instrumentation" do
     }
 
     cases.each do |expected_outcome, drive|
-      payloads = payloads_for("cnfs_cognito.oidc.verify") do
-        expect { drive.call }.to raise_error(CnfsCognito::Providers::VerificationError)
+      payloads = payloads_for("partitia_cognito.oidc.verify") do
+        expect { drive.call }.to raise_error(Partitia::Cognito::Providers::VerificationError)
       end
       expect(payloads.first).to include(outcome: expected_outcome)
     end
   end
 
-  it "emits a nested cnfs_cognito.oidc.signing_key event carrying the kid" do
-    payloads = payloads_for("cnfs_cognito.oidc.signing_key") do
+  it "emits a nested partitia_cognito.oidc.signing_key event carrying the kid" do
+    payloads = payloads_for("partitia_cognito.oidc.signing_key") do
       provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
     end
 
@@ -59,15 +59,15 @@ RSpec.describe CnfsCognito::Providers::Oidc, "instrumentation" do
       { status: 200, headers: { "Content-Type" => "application/json" }, body: jwks.to_json }
     )
 
-    payloads = payloads_for("cnfs_cognito.oidc.signing_key") do
+    payloads = payloads_for("partitia_cognito.oidc.signing_key") do
       provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
     end
 
     expect(payloads.first).to include(rotated: true)
   end
 
-  it "emits cnfs_cognito.oidc.http egress events with method, status, and a bounded endpoint (never the url)" do
-    payloads = payloads_for("cnfs_cognito.oidc.http") do
+  it "emits partitia_cognito.oidc.http egress events with method, status, and a bounded endpoint (never the url)" do
+    payloads = payloads_for("partitia_cognito.oidc.http") do
       provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
     end
 
@@ -79,11 +79,11 @@ RSpec.describe CnfsCognito::Providers::Oidc, "instrumentation" do
     expect(payloads.map(&:keys).flatten).not_to include(:url)
   end
 
-  it "emits cnfs_cognito.oidc.exchange_code with outcome=ok and a token-endpoint http POST" do
+  it "emits partitia_cognito.oidc.exchange_code with outcome=ok and a token-endpoint http POST" do
     stub_token_endpoint(id_token: id_token)
 
-    exchange = payloads_for("cnfs_cognito.oidc.exchange_code") do
-      @http = payloads_for("cnfs_cognito.oidc.http") do
+    exchange = payloads_for("partitia_cognito.oidc.exchange_code") do
+      @http = payloads_for("partitia_cognito.oidc.http") do
         provider.exchange_code(code: "auth-code", redirect_uri: "https://app.test/cb", code_verifier: "v")
       end
     end
@@ -93,16 +93,16 @@ RSpec.describe CnfsCognito::Providers::Oidc, "instrumentation" do
     expect(post).to include(endpoint: "token", status: 200)
   end
 
-  # The cardinality/PII guard (WS1.5): no cnfs_cognito span may carry a sensitive
+  # The cardinality/PII guard (WS1.5): no partitia-cognito span may carry a sensitive
   # / high-cardinality attribute. The forbidden set is READ FROM the redaction
   # config (Plan 006), so a new sensitive field is enforced here automatically.
-  it "attaches no sensitive field to any cnfs_cognito span (list read from RedactionConfig)" do
-    sensitive = CnfsSupport::RedactionConfig.sensitive_fields
+  it "attaches no sensitive field to any partitia_cognito span (list read from RedactionConfig)" do
+    sensitive = Partitia::Support::RedactionConfig.sensitive_fields
     stub_token_endpoint(id_token: id_token)
 
     captured = []
     callback = ->(name, _s, _f, _id, payload) { captured << [ name, payload ] }
-    ActiveSupport::Notifications.subscribed(callback, /\Acnfs_cognito\./) do
+    ActiveSupport::Notifications.subscribed(callback, /\Apartitia_cognito\./) do
       provider.verify(id_token: id_token, nonce: OidcHelpers::NONCE)
       provider.exchange_code(code: "c", redirect_uri: "https://app.test/cb", code_verifier: "v")
     end

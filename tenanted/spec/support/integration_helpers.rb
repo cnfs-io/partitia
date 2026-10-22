@@ -4,37 +4,37 @@ module IntegrationHelpers
   # guard — and stub the IdP HTTP surface. Called from an integration example
   # group's `before`, which runs AFTER the global tenancy reset.
   def wire_integration!
-    CnfsTenanted.after_provision << ->(context) { Iam::TenantSeeder.call(context) }
-    CnfsTenanted.platform_console_guard = IDENTITY_CONSOLE_GUARD
+    Partitia::Tenanted.after_provision << ->(context) { Partitia::Iam::TenantSeeder.call(context) }
+    Partitia::Tenanted.platform_console_guard = IDENTITY_CONSOLE_GUARD
     stub_oidc_discovery
   end
 
   def provision_platform!(owner_email: "owner@platform.test")
-    CnfsTenanted.provision_platform!(owner_email: owner_email)
+    Partitia::Tenanted.provision_platform!(owner_email: owner_email)
   end
 
   def handle_for(subdomain)
-    Tenant.find_by(subdomain: subdomain).handle
+    Partitia::Tenanted::Tenant.find_by(subdomain: subdomain).handle
   end
 
   # A tenant registry row; its after_create provisions the tenant DB and runs the
   # seeder (Account + root + bootstrap token) inside it.
   def create_tenant!(subdomain:, owner_email: "owner@#{subdomain}.test", name: nil)
-    Tenant.create!(name: name || subdomain.capitalize, subdomain: subdomain, owner_email: owner_email)
+    Partitia::Tenanted::Tenant.create!(name: name || subdomain.capitalize, subdomain: subdomain, owner_email: owner_email)
   end
 
   # An App Admin (a NON-root principal) seeded explicitly into the reserved DB,
   # with a bootstrap/invite token — App Admins are never auto-seeded (ADR 0004).
   def seed_app_admin!(email: "admin@platform.test")
-    CnfsTenanted.with_platform do
-      admin = Iam::HumanPrincipal.create!(name: email, email: email)
+    Partitia::Tenanted.with_platform do
+      admin = Partitia::Iam::HumanPrincipal.create!(name: email, email: email)
       [ admin, admin.issue_link_token! ]
     end
   end
 
   # The bootstrap token the seeder surfaced for the most recently provisioned DB.
   def last_bootstrap_token
-    Iam::TenantSeeder.last_bootstrap_token
+    Partitia::Iam::TenantSeeder.last_bootstrap_token
   end
 
   # Drive the full OIDC round-trip and stop once the callback has run. The result

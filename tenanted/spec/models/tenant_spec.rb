@@ -1,13 +1,13 @@
 require "rails_helper"
 
-RSpec.describe Tenant do
+RSpec.describe Partitia::Tenanted::Tenant do
   def build_tenant(**overrides)
-    Tenant.new({ name: "Acme", subdomain: "acme", owner_email: "owner@acme.test" }.merge(overrides))
+    Partitia::Tenanted::Tenant.new({ name: "Acme", subdomain: "acme", owner_email: "owner@acme.test" }.merge(overrides))
   end
 
   describe "validations" do
     it "requires name, subdomain, and owner_email" do
-      tenant = Tenant.new
+      tenant = Partitia::Tenanted::Tenant.new
       tenant.valid?
       expect(tenant.errors.attribute_names).to include(:name, :subdomain, :owner_email)
     end
@@ -22,8 +22,8 @@ RSpec.describe Tenant do
     it "assigns a handle on create from the Crockford-ish alphabet" do
       tenant = build_tenant
       tenant.valid?
-      charset = Regexp.escape(Tenant::HANDLE_ALPHABET.join)
-      expect(tenant.handle).to match(/\A[#{charset}]{#{Tenant::HANDLE_LENGTH}}\z/)
+      charset = Regexp.escape(Partitia::Tenanted::Tenant::HANDLE_ALPHABET.join)
+      expect(tenant.handle).to match(/\A[#{charset}]{#{Partitia::Tenanted::Tenant::HANDLE_LENGTH}}\z/)
     end
 
     it "never emits an ambiguous character (0/1/i/l/o/u)" do
@@ -49,7 +49,7 @@ RSpec.describe Tenant do
       # First candidate is the reserved value; the generator must reject it and
       # retry rather than assign it.
       allow(tenant).to receive(:generate_handle_candidate)
-        .and_return(CnfsTenanted::RESERVED_HANDLE, "abcdefgh")
+        .and_return(Partitia::Tenanted::RESERVED_HANDLE, "abcdefgh")
       tenant.valid?
       expect(tenant.handle).to eq("abcdefgh")
     end
@@ -72,11 +72,11 @@ RSpec.describe Tenant do
 
   describe "reserved handle" do
     it "rejects the reserved value as a handle" do
-      expect(build_tenant(handle: CnfsTenanted::RESERVED_HANDLE)).not_to be_valid
+      expect(build_tenant(handle: Partitia::Tenanted::RESERVED_HANDLE)).not_to be_valid
     end
 
     it "rejects the reserved value as a subdomain" do
-      expect(build_tenant(subdomain: CnfsTenanted::RESERVED_HANDLE)).not_to be_valid
+      expect(build_tenant(subdomain: Partitia::Tenanted::RESERVED_HANDLE)).not_to be_valid
     end
   end
 end

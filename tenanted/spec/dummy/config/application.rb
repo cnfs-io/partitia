@@ -25,12 +25,12 @@ module Dummy
     # For compatibility with applications that use this config
     config.action_controller.include_all_helpers = false
 
-    # Migration scope names. cnfs_tenanted's engine ships these defaults
+    # Migration scope names. partitia-tenanted's engine ships these defaults
     # (tenant -> db/migrate, global -> db/global_migrate). Override here to use
     # different database names — keep these keys, your database.yml entry names,
     # and the `tenanted "<name>"` call in ApplicationRecord in sync. Set after
     # the engine has loaded (Bundler.require above), so this wins.
-    CnfsSupport.migrations_paths_for.replace(
+    Partitia::Support.migrations_paths_for.replace(
       tenant: "db/migrate",
       global: "db/global_migrate"
     )

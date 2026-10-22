@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe CnfsTenanted::Resolvers::Header do
+RSpec.describe Partitia::Tenanted::Resolvers::Header do
   def resolve(headers, **opts)
     described_class.new(**opts).call(FakeRequest.new(host: "example.com", headers: headers))
   end

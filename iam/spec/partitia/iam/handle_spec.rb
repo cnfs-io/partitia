@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Iam::Handle do
+RSpec.describe Partitia::Iam::Handle do
   describe ".generate" do
     it "produces a handle of the default length in the Crockford charset" do
       handle = described_class.generate

@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in cnfs_cognito.gemspec.
+# Specify your gem's dependencies in partitia-cognito.gemspec.
 gemspec
 
 gem "puma"
@@ -12,8 +12,8 @@ gem "rubocop-rails-omakase", require: false
 
 # Start debugger with binding.b [https://github.com/ruby/debug]
 # gem "debug", ">= 1.0.0"
-gem "cnfs_support", path: "../support"
-gem "cnfs_dev", path: "../dev"
+gem "partitia-support", path: "../support"
+gem "partitia-dev", path: "../dev"
 
 group :development, :test do
   gem "factory_bot_rails"

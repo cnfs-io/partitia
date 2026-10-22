@@ -11,14 +11,14 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.1].define(version: 2026_06_01_033001) do
-  create_table "tenants", force: :cascade do |t|
+  create_table "partitia_tenanted_tenants", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "handle", null: false
     t.string "name", null: false
     t.string "owner_email", null: false
     t.string "subdomain", null: false
     t.datetime "updated_at", null: false
-    t.index ["handle"], name: "index_tenants_on_handle", unique: true
-    t.index ["subdomain"], name: "index_tenants_on_subdomain", unique: true
+    t.index ["handle"], name: "index_partitia_tenanted_tenants_on_handle", unique: true
+    t.index ["subdomain"], name: "index_partitia_tenanted_tenants_on_subdomain", unique: true
   end
 end

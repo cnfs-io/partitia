@@ -1,4 +1,4 @@
-CnfsCognito::Engine.routes.draw do
+Partitia::Cognito::Engine.routes.draw do
   # Auth-code flow (Plan 003 WS3). Mounted by the host (the dummy mounts at
   # /auth), so these are /auth/login, /auth/callback, /auth/logout.
   get    "login",    to: "sessions#new"

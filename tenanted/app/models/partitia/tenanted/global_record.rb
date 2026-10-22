@@ -2,11 +2,21 @@
 # such as the Tenant registry itself. Lives in the dedicated `global` database,
 # separate from the per-tenant databases that ApplicationRecord connects to.
 #
-# Defined in the top-level namespace (not CnfsTenanted::) deliberately: this is
-# foundational app infrastructure that host-app global models inherit from, the
-# same way they inherit from ApplicationRecord. See the gem README.
-class GlobalRecord < ActiveRecord::Base
-  self.abstract_class = true
+# Namespaced under Partitia::Tenanted (no Partitia gem defines a top-level
+# constant). Host-app global models inherit from it the same way they inherit
+# from ApplicationRecord:
+#
+#   class Plan < Partitia::Tenanted::GlobalRecord; end
+#
+# The partitia_tenanted_ table prefix (Partitia::Tenanted.table_name_prefix)
+# applies only to models inside the Partitia::Tenanted namespace; a host model
+# like Plan keeps its plain table name.
+module Partitia
+  module Tenanted
+    class GlobalRecord < ActiveRecord::Base
+      self.abstract_class = true
 
-  connects_to database: { writing: :global, reading: :global }
+      connects_to database: { writing: :global, reading: :global }
+    end
+  end
 end

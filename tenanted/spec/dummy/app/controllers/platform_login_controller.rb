@@ -5,6 +5,6 @@
 class PlatformLoginController < ApplicationController
   def create
     session[:platform_auth] = true
-    redirect_to cnfs_cognito.login_path(link_token: params[:link_token]), allow_other_host: false
+    redirect_to partitia_cognito.login_path(link_token: params[:link_token]), allow_other_host: false
   end
 end

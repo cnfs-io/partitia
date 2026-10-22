@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Authentik dev harness for cnfs_cognito. DEV ONLY — the test suite never needs
+# Authentik dev harness for partitia-cognito. DEV ONLY — the test suite never needs
 # it. Idempotent: up | down | status | logs | reset.
 set -euo pipefail
 
@@ -10,7 +10,7 @@ PORT="${AUTHENTIK_PORT:-9000}"
 HEALTH_URL="http://localhost:${PORT}/-/health/ready/"
 
 compose() {
-  docker compose --project-name cnfs-authentik --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  docker compose --project-name partitia-authentik --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
 require_docker() {

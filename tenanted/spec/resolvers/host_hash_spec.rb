@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe CnfsTenanted::Resolvers::HostHash do
+RSpec.describe Partitia::Tenanted::Resolvers::HostHash do
   def resolve(host, map)
     described_class.new(map).call(FakeRequest.new(host: host))
   end

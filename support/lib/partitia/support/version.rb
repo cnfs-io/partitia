@@ -1,3 +1,5 @@
-module CnfsSupport
-  VERSION = "0.1.0"
+module Partitia
+  module Support
+    VERSION = "0.1.0"
+  end
 end

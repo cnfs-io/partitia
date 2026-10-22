@@ -1,4 +1,6 @@
-module CnfsUi
-  class ApplicationController < ActionController::Base
+module Partitia
+  module Ui
+    class ApplicationController < ActionController::Base
+    end
   end
 end

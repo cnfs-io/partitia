@@ -3,9 +3,9 @@
 # Global database: the tenant registry. Read in place from this engine's
 # db/global_migrate path (the host wires `global` -> db/global_migrate in
 # database.yml via the install generator).
-class CreateTenants < ActiveRecord::Migration[8.1]
+class CreatePartitiaTenantedTenants < ActiveRecord::Migration[8.1]
   def change
-    create_table :tenants do |t|
+    create_table :partitia_tenanted_tenants do |t|
       # Immutable routing key (ADR 0002 §1): opaque, system-generated. Keys the
       # tenant database; access key ids and URNs embed it.
       t.string :handle, null: false
@@ -20,7 +20,7 @@ class CreateTenants < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :tenants, :handle, unique: true
-    add_index :tenants, :subdomain, unique: true
+    add_index :partitia_tenanted_tenants, :handle, unique: true
+    add_index :partitia_tenanted_tenants, :subdomain, unique: true
   end
 end

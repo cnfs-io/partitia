@@ -21,7 +21,7 @@ RSpec.describe "tenant resolution", type: :request do
     end
 
     it "uses the configured tenant_not_found_handler when set" do
-      CnfsTenanted.tenant_not_found_handler = ->(name) { render plain: "handler: #{name}", status: :not_found }
+      Partitia::Tenanted.tenant_not_found_handler = ->(name) { render plain: "handler: #{name}", status: :not_found }
 
       get "/probe", headers: { "HOST" => "nope.example.com" }
 
@@ -30,7 +30,7 @@ RSpec.describe "tenant resolution", type: :request do
     end
 
     it "lets a controller override of #tenant_not_found win" do
-      CnfsTenanted.tenant_not_found_handler = ->(name) { render plain: "handler: #{name}", status: :not_found }
+      Partitia::Tenanted.tenant_not_found_handler = ->(name) { render plain: "handler: #{name}", status: :not_found }
 
       get "/probe-override", headers: { "HOST" => "nope.example.com" }
 

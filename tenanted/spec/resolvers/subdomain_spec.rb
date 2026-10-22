@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe CnfsTenanted::Resolvers::Subdomain do
+RSpec.describe Partitia::Tenanted::Resolvers::Subdomain do
   def resolve(host, **opts)
     described_class.new(**opts).call(FakeRequest.new(host: host))
   end

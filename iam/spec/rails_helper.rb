@@ -48,8 +48,8 @@ RSpec.configure do |config|
   # single-tenant account handle and the per-request Current attributes. Reset
   # both so examples don't leak into one another (order is randomized).
   config.before do
-    Iam.config.account_handle = nil
-    Iam::Current.reset
+    Partitia::Iam.config.account_handle = nil
+    Partitia::Iam::Current.reset
   end
 
   # Remove this line if you're not using ActiveRecord or ActiveRecord fixtures

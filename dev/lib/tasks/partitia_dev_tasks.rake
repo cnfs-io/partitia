@@ -1,4 +1,4 @@
 # desc "Explaining what the task does"
-# task :cnfs_dev do
+# task "partitia:dev:example" do
 #   # Task goes here
 # end

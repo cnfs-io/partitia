@@ -1,6 +1,6 @@
-class CreateIamPrincipals < ActiveRecord::Migration[8.1]
+class CreatePartitiaIamPrincipals < ActiveRecord::Migration[8.1]
   def change
-    create_table :iam_principals do |t|
+    create_table :partitia_iam_principals do |t|
       t.string :type, null: false   # STI discriminator (human / machine)
       t.string :name, null: false
       # Human identity attributes (from the IdP assertion / provisioning);
@@ -16,9 +16,9 @@ class CreateIamPrincipals < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :iam_principals, :type
+    add_index :partitia_iam_principals, :type
     # At most one root per database (ADR 0004), enforced at the DB layer via a
     # partial unique index. SQLite supports partial indexes.
-    add_index :iam_principals, :root, unique: true, where: "root"
+    add_index :partitia_iam_principals, :root, unique: true, where: "root"
   end
 end

@@ -1,13 +1,13 @@
-require_relative "lib/cnfs_dev/version"
+require_relative "lib/partitia/dev/version"
 
 Gem::Specification.new do |spec|
-  spec.name        = "cnfs_dev"
-  spec.version     = CnfsDev::VERSION
+  spec.name        = "partitia-dev"
+  spec.version     = Partitia::Dev::VERSION
   spec.authors     = [ "Robert Roach" ]
   spec.email       = [ "rjayroach@gmail.com" ]
   spec.homepage    = "TODO"
-  spec.summary     = "TODO: Summary of CnfsDev."
-  spec.description = "TODO: Description of CnfsDev."
+  spec.summary     = "TODO: Summary of Partitia::Dev."
+  spec.description = "TODO: Description of Partitia::Dev."
   spec.license     = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-RSpec.describe CnfsSupport::RedactionConfig do
+RSpec.describe Partitia::Support::RedactionConfig do
   after do
     described_class.reset_instance!
-    ENV.delete("CNFS_REDACTION_ADDITIONAL_FIELDS")
+    ENV.delete("PARTITIA_REDACTION_ADDITIONAL_FIELDS")
   end
 
   it "ships the family-wide sensitive defaults" do
@@ -23,7 +23,7 @@ RSpec.describe CnfsSupport::RedactionConfig do
   end
 
   it "extends via additional_fields WITHOUT dropping the defaults (merge)" do
-    ENV["CNFS_REDACTION_ADDITIONAL_FIELDS"] = "ssn,date_of_birth"
+    ENV["PARTITIA_REDACTION_ADDITIONAL_FIELDS"] = "ssn,date_of_birth"
     described_class.reset_instance!
 
     expect(described_class.sensitive_fields).to include(:ssn, :date_of_birth)
@@ -31,7 +31,7 @@ RSpec.describe CnfsSupport::RedactionConfig do
   end
 
   it "de-duplicates so the set is clean" do
-    ENV["CNFS_REDACTION_ADDITIONAL_FIELDS"] = "email,email"
+    ENV["PARTITIA_REDACTION_ADDITIONAL_FIELDS"] = "email,email"
     described_class.reset_instance!
 
     expect(described_class.sensitive_fields.count(:email)).to eq(1)

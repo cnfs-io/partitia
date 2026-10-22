@@ -13,11 +13,11 @@ development:
   global:
     <<: *default
     database: storage/development.sqlite3
-    migrations_paths: <%= CnfsSupport.migrations_paths[:global] %>
+    migrations_paths: <%= Partitia::Support.migrations_paths[:global] %>
   tenant:
     <<: *default
     database: storage/development/%{tenant}.sqlite3
-    migrations_paths: <%= CnfsSupport.migrations_paths[:tenant] %>
+    migrations_paths: <%= Partitia::Support.migrations_paths[:tenant] %>
     tenanted: true
 
 # Warning: The database defined as "test" will be erased and
@@ -27,11 +27,11 @@ test:
   global:
     <<: *default
     database: storage/test.sqlite3
-    migrations_paths: <%= CnfsSupport.migrations_paths[:global] %>
+    migrations_paths: <%= Partitia::Support.migrations_paths[:global] %>
   tenant:
     <<: *default
     database: storage/test/%{tenant}.sqlite3
-    migrations_paths: <%= CnfsSupport.migrations_paths[:tenant] %>
+    migrations_paths: <%= Partitia::Support.migrations_paths[:tenant] %>
     tenanted: true
 
 # SQLite3 write its data on the local filesystem, as such it requires

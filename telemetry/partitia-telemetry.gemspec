@@ -1,13 +1,13 @@
-require_relative "lib/cnfs_telemetry/version"
+require_relative "lib/partitia/telemetry/version"
 
 Gem::Specification.new do |spec|
-  spec.name        = "cnfs_telemetry"
-  spec.version     = CnfsTelemetry::VERSION
+  spec.name        = "partitia-telemetry"
+  spec.version     = Partitia::Telemetry::VERSION
   spec.authors     = [ "Robert Roach" ]
   spec.email       = [ "rjayroach@gmail.com" ]
   spec.homepage    = "TODO"
   spec.summary     = "ActiveSupport::Notifications -> OpenTelemetry span bridge for the CNFS gem family."
-  spec.description = "Subscribes to cnfs-prefixed ActiveSupport::Notifications events " \
+  spec.description = "Subscribes to partitia-prefixed ActiveSupport::Notifications events " \
                     "and translates them into OpenTelemetry spans. Depends on the OTel " \
                     "API only — no SDK, no exporters. Stays a no-op until a host app " \
                     "installs and configures the SDK (via the install generator)."
