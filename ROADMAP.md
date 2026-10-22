@@ -91,7 +91,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       not only its dummy (single- and multi-tenant `rails new` apps: second runs change nothing,
       databases migrate, served on 0.0.0.0)
 - [x] dev gets specs (72)
-- [ ] iam's install generator is wired into the templates (D5)
+- [x] iam's install generator is wired into the templates (D5)
 - [x] Known from the rename: `partitia:tenanted:views` `source_root`; ui's `eager_load!`; tenanted's
       test DB
 - [x] The gaps table in `ARCHITECTURE.md`, engine by engine; what is left there is small or
@@ -174,8 +174,7 @@ How it is built:
 - GlitchTip's events for an app: `pcm exec -s web glitchtip -- ./manage.py shell -c ...` with
   `IssueEvent.objects.filter(issue__project__organization__slug="partitia",
   issue__project__slug=<slug>)`.
-- Container logs: `podman compose --pcm logs <service>` is a zsh function from
-  `~/.config/zsh/pcm.zsh`; a non-interactive shell has to source it first.
+- Container logs: `pcm logs <service> [-s NAME] [-f] [--tail N] [--since T]` (pcm 0.4.0).
 
 Later (longer term):
 
@@ -187,12 +186,37 @@ Later (longer term):
 `pt new single|multi` produces a wired app with no manual steps. D6 depends on it; the UI does
 not (that is D7).
 
-- [ ] Engines by gem name through gem-local, not `~/spikes/chorus` paths; no `binding.pry`
-- [ ] The recipe selects engines: `single` and `multi` recipes (`partitia.yml` / `<app>.yml`)
-- [ ] `~/.config/rails/templates/cnfs.rb` rewritten as `partitia.rb`: the engines' installers in
+- [x] Engines by gem name through gem-local, not `~/spikes/chorus` paths; no `binding.pry`
+- [x] The recipe selects engines: `single` and `multi` recipes (`partitia.yml` / `<app>.yml`)
+- [x] `~/.config/rails/templates/cnfs.rb` rewritten as `partitia.rb`: the engines' installers in
       the D3 order (tenanted before anything that edits `database.yml`), then `db:prepare`
-- [ ] Proven like D3: a fresh `pt new single` and `pt new multi`, installers re-run with no
+- [x] Proven like D3: a fresh `pt new single` and `pt new multi`, installers re-run with no
       changes, `pt services`, `pt server`, `pt smoke`
+
+**What an agent needs to know (D5):**
+- `pt new <recipe> <name> [rails new options]`; `pt new <name>` alone is a plain `rails new` (plus
+  `<name>.yml` beside it, if any). A recipe is `<recipe>.yml` in `PARTITIA_APPS_HOME`, else the
+  shipped `~/.config/rails/recipes/{single,multi}.yml` (cnfs `rails` package). `pt` hands it to the
+  templates as `PARTITIA_RECIPE`; `lib.rb` merges it over `partitia.yml`, and `<name>.yml` over it.
+- A recipe is the templates' answers: `templates.partitia.engines` (and `tenants` for the demo
+  tenants), every `dev` gem answered, and `ui: false` (a template set to `false` is not applied).
+  Any template gem left without an `install:` answer makes `rails new` stop and ask.
+- `templates/partitia.rb` adds `partitia-<engine>` lines to the Gemfile with
+  `path: "#{partitia_gems}/partitia-<engine>"`, `partitia_gems` being gem-local's home
+  (`RUBY_LOCAL_GEMS_HOME`) read when bundler runs; `Gemfile.lock` still records the absolute path.
+  It fails early when an engine is not linked (`gem-local build`). After bundling: the installers
+  in D3's order, `db:prepare`, and with tenanted a guarded block in `db/seeds.rb` (platform
+  database, then `Tenant` per demo subdomain) and `db:seed`.
+- The app records its recipe in `./partitia.yml` (`recipe:` and the engines); `pt list`'s RECIPE
+  reads it, and `pt template apply partitia` re-runs everything from it. That re-run leaving
+  `git status` clean is the idempotency check.
+- The template adds `/config/*.local.yml` to `.gitignore`, so `pt services` (local store) leaves a
+  fresh app clean.
+- Tenant resolution runs in `ApplicationController`: `/` on a fresh app is Rails' welcome page and
+  resolves nothing. Check it with `/tenants`: `acme.localhost` 403 (the console guard, after the
+  tenant resolved), an unknown subdomain 302 to `/tenant-unknown`.
+- `pt engine check` with no gems fails on `ui` (no installer: D7); check the recipe's engines by
+  name.
 
 ## D6 — The demo
 
@@ -221,7 +245,6 @@ Last: nothing depends on it.
 
 - [ ] appwork: its gems still use the old names (`CnfsSupport`, `cnfs_*` gems, `Iam::`, `iam_`
       tables), about 45 files across chatter, chorus, gtd, micro_manager and okf
-- [ ] `~/.config/rails/templates/cnfs.rb`: old gem and generator names (D5 rewrites it)
 - [ ] **Manual test (the person):** `PARTITIA_SECRETS_STORE=fnox pt services` against the real
       1Password vault through the space's service-account token. Only `fnox set --dry-run` and
       local providers have been tested; check the DSN lands in the vault, fnox exports
