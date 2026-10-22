@@ -83,14 +83,28 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 
 ## D3 — Each engine meets the contract on its own
 
-- [ ] In order: support, dev, telemetry, tenanted, iam, cognito; each installed into a fresh app,
-      not only its dummy
-- [ ] dev gets specs; iam's install generator is wired into the templates
-- [ ] Known from the rename: `partitia:tenanted:views` has no `source_root`; ui's `eager_load!`
-      fails on the RubyUI Button (tenanted's test DB is fixed: `maintain_test_schema!`)
-- [ ] The gaps table in `ARCHITECTURE.md`, engine by engine
-- [ ] tenanted: migration status for tenant databases (`db:migrate:status` across tenants;
-      activerecord-tenanted has none), from the earlier `factory` app's `tenant_migrate.rake`
+- [x] In order: support, dev, telemetry, tenanted, iam, cognito; each installed into a fresh app,
+      not only its dummy (single- and multi-tenant `rails new` apps: second runs change nothing,
+      databases migrate, served on 0.0.0.0)
+- [x] dev gets specs (72)
+- [ ] iam's install generator is wired into the templates (D5)
+- [x] Known from the rename: `partitia:tenanted:views` `source_root`; ui's `eager_load!`; tenanted's
+      test DB
+- [x] The gaps table in `ARCHITECTURE.md`, engine by engine; what is left there is small or
+      belongs to D5 (ERB views, ui's installer)
+- [ ] Small follow-ups from that table: cognito's unreachable-IdP 500; tenanted's
+      `db:migrate:global` naming and `trace` setting; dev's unconditional `pry-byebug` require
+- [x] tenanted: migration status for tenant databases: `partitia:tenanted:migrate:status`
+
+**What an agent needs to know (D3):**
+- `pt engine check` is the contract's static check; run it after touching an engine.
+- Prove an engine in a fresh `rails new` app, not only its dummy: install twice (the second run
+  must leave `git status` clean), `db:prepare`, `pt server`, real requests. Both bugs D3 found
+  (support's installer on a tenanted `database.yml`; `*.localhost` never resolving a tenant)
+  passed every spec and showed up only there.
+- Install order: `partitia:tenanted:install` before anything that edits `database.yml`.
+- Parallel agents share the session's scratchpad: give each its own uniquely named directory;
+  one agent's `rm -rf fresh` deleted another's app.
 
 ## D4 — pcm wiring
 

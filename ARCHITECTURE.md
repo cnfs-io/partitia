@@ -155,27 +155,32 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 | support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
 | dev | Exempt from §3–§6 and §9 (Q1). Has specs now. `require "pry-byebug"` runs whenever the gem loads, not only in the console; no public `Partitia::Dev.reset!` |
 | telemetry | Not yet installed into a fresh app (D3). The GlitchTip DSN is a manual step until pcm provisions GlitchTip (D4) |
-| tenanted | Not isolated (by design: `tenants` routes drawn into the host). Install writes `database.yml` with `force: true` (§5); writes controllers and an initializer unguarded (§5). Views are ERB (§8). No config class: module accessors only (§4). `views` generator offers `accounts`, which the gem doesn't have, and rejects `tenant_not_found`, which its own template tells you to run |
+| tenanted | Views are ERB (§8, D5). `db:migrate:global` is in the `db:` namespace, not `partitia:tenanted:` (§1). `config.partitia_tenanted.trace` is an observability setting that may belong in telemetry's config (§4, Q2). Migration status also lists activerecord-tenanted's `development-tenant` template database |
 | iam | Layout is ERB (§8, D5). README is the Rails stub, so the integrations list (§2) is missing |
-| cognito | None (D3 done). Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |
+| cognito | When the IdP is unreachable, `/auth/login` is a bare 500 (`ECONNREFUSED`); it should be a clear "identity provider unavailable" page (503). Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |
 | ui | Shelved. No install generator (§5): `partitia:ui:install` is where D5's app setup (Phlex/RubyUI namespaces, the host's `app/components/ruby_ui`, tokens) belongs |
 
 ## Wiring an app today
 
-What a host does now, from the dummies and generators. D3 and D5 move these steps into
-generators and templates until `pt new` does all of it.
+Proven on two fresh `rails new` apps (2026-10-22): each generator run twice, the second
+changing nothing; both databases migrated; served with `pt server` on 0.0.0.0. D5 turns these
+steps into `pt new`.
 
-**Single-tenant, iam + cognito:** add the gems; `migrations_paths` for `primary` in
-`database.yml`; `db:migrate`; `partitia:iam:install` (production: `PARTITIA_IAM_HMAC_KEY`);
-`partitia:cognito:install` (mounts `/auth`); issuer, client id and secret; register
-`<host>/auth/callback` in the IdP; `include Partitia::Iam::Authenticatable` and
-`before_action :require_authentication` where needed.
+**Single-tenant** (support, telemetry, iam, cognito): add the gems, then
+`partitia:support:install` (the registry line in every environment's primary database),
+`partitia:telemetry:install`, `partitia:iam:install`, `partitia:cognito:install` (mounts
+`/auth`, writes `config/partitia_cognito.yml`, filters `code`/`state`); `db:prepare`. Each
+prints what is left: production secrets, `include Partitia::Iam::Authenticatable` where
+sign-in is required, the Authentik provider and client secret.
 
-**Multi-tenant, + tenanted:** `partitia:tenanted:install` first (database planes, resolution,
-tenant controllers); then iam and cognito as above; then an initializer like
-`tenanted/spec/dummy/config/initializers/identity.rb` (the Rack tenant resolver so the
-`/auth/callback` runs in the tenant's database, `identity_resolver`, `policy_resolver`,
-`platform_console_guard`); `provision_platform!`, then a `Tenant` per tenant.
+**Multi-tenant** (+ tenanted): `partitia:tenanted:install` **first**, while `database.yml` is
+still stock (it writes the global and tenant planes; support's installer then finds them
+wired), then the others as above; `db:prepare`; `Partitia::Tenanted.provision_platform!`, then a
+`Tenant` per tenant (iam seeds each tenant's account and root on creation). `acme.localhost`
+runs in acme's database; an unknown subdomain redirects to `/tenant-unknown`; `/tenants`
+answers 403 until `platform_console_guard` is set. Signing in on a tenant's subdomain needs
+the wiring in `tenanted/spec/dummy/config/initializers/identity.rb` (the callback must run in
+the tenant's database), which D6 settles.
 
 ## Decisions (2026-10-22)
 
