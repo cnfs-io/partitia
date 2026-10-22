@@ -1,0 +1,10 @@
+/.bundle/
+/doc/
+/log/*.log
+/pkg/
+/tmp/
+
+# Authentik dev harness secrets (WS4) — never commit
+spec/dummy/docker/authentik/.env
+/spec/dummy/log/*.log
+/spec/dummy/tmp/
