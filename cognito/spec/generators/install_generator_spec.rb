@@ -70,6 +70,7 @@ RSpec.describe Partitia::Cognito::Generators::InstallGenerator do
       expect(yml["development"]).to eq(
         "issuer" => "http://localhost:9000/application/o/dummy/",
         "client_id" => "dummy",
+        "client_type" => "public",
         "scopes" => %w[openid email profile]
       )
       expect(yml["test"]).to include("issuer" => "http://authentik.test/application/o/dummy/",

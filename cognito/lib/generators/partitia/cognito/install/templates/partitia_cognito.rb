@@ -32,7 +32,7 @@ Partitia::Cognito::Providers::Registry.register(
   Partitia::Cognito::Providers::Authentik.new(
     issuer:        Partitia::Cognito::Config.issuer,
     client_id:     Partitia::Cognito::Config.client_id,
-    client_secret: Partitia::Cognito::Config.client_secret,
+    client_secret: Partitia::Cognito::Config.token_secret,
     scopes:        Partitia::Cognito::Config.scopes
   )
 )
