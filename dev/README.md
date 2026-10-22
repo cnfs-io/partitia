@@ -221,8 +221,9 @@ Available at the prompt without any registration:
 
 ## Step aliases (with pry-byebug)
 
-When `pry-byebug` is present, these debugger aliases are installed: `n` (next),
-`s` (step), `c` (continue), `f` (finish).
+`pry-byebug` loads with the console wiring (`rails console`), not when the gem is
+required, so web and job processes never load it. In the console these debugger
+aliases are installed: `n` (next), `s` (step), `c` (continue), `f` (finish).
 
 ## License
 

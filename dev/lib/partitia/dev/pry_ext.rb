@@ -1,3 +1,7 @@
+# Loaded only from the Railtie's `console` block (and specs), so pry and
+# pry-byebug's patches to Pry and byebug never load in web or job processes.
+require "pry"
+require "pry-byebug"
 require_relative "pry_ext/console_methods"
 require_relative "pry_ext/prompt"
 require_relative "pry_ext/shortcut_planner"

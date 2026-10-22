@@ -1,7 +1,6 @@
 require_relative "dev/version"
 require_relative "dev/builder"
 require_relative "dev/railtie" if defined?(Rails::Railtie)
-require "pry-byebug"
 
 module Partitia
   module Dev
@@ -40,7 +39,8 @@ module Partitia
     # Railtie's `console` block that loads the (Pry-dependent) wiring. Nothing
     # here touches Pry, Rails, or ActiveRecord, so populating them is safe in any
     # process. The heavier machinery in lib/partitia/dev/pry_ext.rb reads these later,
-    # only when a console session starts.
+    # only when a console session starts; it is also what loads pry and
+    # pry-byebug, so neither is required by web or job processes.
     def self.namespaces     = (@namespaces     ||= [])
     def self.models         = (@models         ||= [])
     def self.commands       = (@commands       ||= [])
