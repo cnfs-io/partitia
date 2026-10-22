@@ -59,7 +59,7 @@ RSpec.describe Partitia::Cognito::Generators::InstallGenerator do
       expect(read("config/routes.rb")).to include('mount Partitia::Cognito::Engine => "/auth"')
       expect(read("config/initializers/partitia_cognito.rb")).to include("Partitia::Cognito::Config.issuer")
       expect(read("config/initializers/filter_parameter_logging.rb"))
-        .to include("filter_parameters += [\n  :code, :state,\n  :passw")
+        .to include("filter_parameters += [\n  :code, :state, :nonce,\n  :passw")
     end
 
     it "writes a yml for development (pcm's Authentik), test and production, with no secret" do
@@ -126,7 +126,7 @@ RSpec.describe Partitia::Cognito::Generators::InstallGenerator do
 
     content = read("config/initializers/filter_parameter_logging.rb")
     expect(content.scan(":state").size).to eq(1)
-    expect(content).to include("  :code,\n")
+    expect(content).to include("  :code, :nonce,\n")
   end
 
   it "appends a filter line when the host's file has no bracketed list" do
@@ -136,13 +136,13 @@ RSpec.describe Partitia::Cognito::Generators::InstallGenerator do
     run_generator
 
     expect(read("config/initializers/filter_parameter_logging.rb"))
-      .to end_with("Rails.application.config.filter_parameters += %i[code state]\n")
+      .to end_with("Rails.application.config.filter_parameters += %i[code state nonce]\n")
   end
 
   it "creates the filter file when the host has none" do
     run_generator
 
     expect(read("config/initializers/filter_parameter_logging.rb"))
-      .to include("Rails.application.config.filter_parameters += %i[code state]")
+      .to include("Rails.application.config.filter_parameters += %i[code state nonce]")
   end
 end

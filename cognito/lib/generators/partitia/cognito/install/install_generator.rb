@@ -12,7 +12,7 @@ module Partitia
       #     provider, wires the identity_resolver seam, sets the policy)
       #   - config/partitia_cognito.yml  (non-secret connection values per
       #     environment; development points at pcm's Authentik)
-      #   - adds the OAuth :code and :state params to filter_parameter_logging
+      #   - adds the OAuth :code, :state and :nonce params to filter_parameter_logging
       #
       # Idempotent (ARCHITECTURE §5): every write is guarded, so a second run
       # changes nothing and asks nothing. It never overwrites a host file.
@@ -24,7 +24,7 @@ module Partitia
         source_root File.expand_path("templates", __dir__)
 
         # What a callback request carries that must never reach the log (§5).
-        FILTERED_PARAMS = %w[code state].freeze
+        FILTERED_PARAMS = %w[code state nonce].freeze
 
         # pcm's stack/authentik (`pcm up authentik`, `pcm show authentik`).
         AUTHENTIK_URL = "http://localhost:9000".freeze
@@ -40,7 +40,7 @@ module Partitia
 
         desc "Mount the broker engine, install the app-owned partitia-cognito " \
              "initializer and config/partitia_cognito.yml, and filter the OAuth " \
-             "code/state params from the log."
+             "code/state/nonce params from the log."
 
         # 1. Mount the broker engine so <mount>/login, /callback, /logout resolve.
         def mount_engine
@@ -68,8 +68,8 @@ module Partitia
           template "partitia_cognito.yml", path
         end
 
-        # 4. Keep the OAuth code and state out of the log (an earlier app logged
-        #    both in clear). Injects into the host's filter list; never rewrites it.
+        # 4. Keep the OAuth code, state and nonce out of the log (an earlier app logged
+        #    code and state in clear; the nonce shows in the login redirect). Injects into the host's filter list; never rewrites it.
         def filter_oauth_params
           path = "config/initializers/filter_parameter_logging.rb"
           unless host_file?(path)
@@ -87,7 +87,7 @@ module Partitia
           if host_file(path).match?(anchor)
             inject_into_file path, "  #{missing.map { |p| ":#{p}" }.join(', ')},\n", after: anchor
           else
-            append_to_file path, "\n# partitia-cognito: the OAuth callback's code and state.\n" \
+            append_to_file path, "\n# partitia-cognito: the OAuth code, state and nonce.\n" \
                                  "Rails.application.config.filter_parameters += #{filter_list(missing)}\n"
           end
         end
@@ -98,7 +98,7 @@ module Partitia
           say "  routes:      Partitia::Cognito::Engine mounted at #{mount_path}"
           say "  initializer: config/initializers/partitia_cognito.rb (app-owned; edit freely)"
           say "  config:      config/partitia_cognito.yml (issuer, client_id, scopes; no secrets)"
-          say "  logging:     :code and :state filtered (config/initializers/filter_parameter_logging.rb)"
+          say "  logging:     :code, :state and :nonce filtered (config/initializers/filter_parameter_logging.rb)"
           say ""
           say "Entry points:", :green
           say "  GET    #{mount_path}/login     start sign-in"
