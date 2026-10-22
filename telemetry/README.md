@@ -76,8 +76,11 @@ The generator:
   `Partitia::Telemetry::Config` (service name, OTLP endpoint) and calls
   `Partitia::Telemetry.install!`.
 - writes `config/initializers/sentry.rb`: `Sentry.init` from `error_dsn`, only when
-  it is set; otherwise error reporting is off.
-- prints what is left: `pcm up telemetry glitchtip`, and setting the GlitchTip DSN.
+  it is set; otherwise error reporting is off. It subscribes Sentry to the Rails error
+  reporter (`config.rails.register_error_subscriber`, off in sentry-rails), so
+  `Rails.error.report` and `Rails.error.handle` reach GlitchTip too.
+- prints what is left: `pt services` (provisions GlitchTip's project and stores the
+  DSN), or setting the DSN yourself.
 
 It is idempotent: a second run adds no gems, leaves both initializers alone (once
 written they are the app's; edit freely) and asks nothing. No endpoint or DSN is
@@ -116,8 +119,11 @@ ascending priority, from `config/partitia_telemetry.yml`, then
 | `error_dsn` | `PARTITIA_TELEMETRY_ERROR_DSN` | nil: error reporting off | GlitchTip/Sentry DSN. A secret: credentials or ENV only |
 | `prefixes` | `PARTITIA_TELEMETRY_PREFIXES` (comma list) | `partitia` | event-name families the span bridge subscribes to |
 
-Get the DSN from GlitchTip (create an organization and project, then the
-project's Client Keys) and set it with `bin/rails credentials:edit`:
+`pt services` creates the app's GlitchTip project and stores its DSN
+(`config/partitia_telemetry.local.yml`, gitignored, or fnox with
+`PARTITIA_SECRETS_STORE=fnox`); `pt services --down` removes it again. By hand, get
+it from GlitchTip (an organization and project, then the project's Client Keys) and
+set it with `bin/rails credentials:edit`:
 
 ```yaml
 partitia_telemetry:

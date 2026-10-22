@@ -36,7 +36,14 @@ RSpec.describe Partitia::Telemetry::Generators::InstallGenerator do
     expect(commands).to eq([ "bundle add opentelemetry-sdk opentelemetry-exporter-otlp sentry-rails" ])
     expect(read("config/initializers/opentelemetry.rb")).to include("Partitia::Telemetry::Config", "sdk_traces_endpoint")
     expect(read("config/initializers/sentry.rb")).to include("error_reporting?", "Sentry.init")
-    expect(output).to include("pcm up telemetry glitchtip", "PARTITIA_TELEMETRY_ERROR_DSN")
+    expect(output).to include("pt services", "PARTITIA_TELEMETRY_ERROR_DSN")
+  end
+
+  # sentry-rails leaves it off: without it Rails.error.report never reaches GlitchTip
+  it "subscribes Sentry to the Rails error reporter" do
+    generate
+
+    expect(read("config/initializers/sentry.rb")).to include("config.rails.register_error_subscriber = true")
   end
 
   it "writes no endpoint or DSN literal into the app" do

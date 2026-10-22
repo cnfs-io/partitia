@@ -62,9 +62,9 @@ module Partitia
               "credentials.partitia_telemetry, PARTITIA_TELEMETRY_*). OTEL_* still wins for the SDK."
           say ""
           say "Still to do:"
-          say "  pcm up telemetry glitchtip", :yellow
-          say "  Set PARTITIA_TELEMETRY_ERROR_DSN (or credentials partitia_telemetry.error_dsn) to the DSN"
-          say "  from GlitchTip's project settings (Client Keys). Until then error reporting is off."
+          say "  pt services   (pcm up telemetry; GlitchTip's project, its DSN stored as error_dsn)", :yellow
+          say "  or set PARTITIA_TELEMETRY_ERROR_DSN (or credentials partitia_telemetry.error_dsn) yourself."
+          say "  Until then error reporting is off."
           say ""
           say "Traces export to #{Partitia::Telemetry::Config::DEFAULT_OTLP_ENDPOINT} (OTLP/HTTP) by default;"
           say "view them in Grafana (`pcm show telemetry` for its URL) under Explore -> Tempo."

@@ -16,5 +16,8 @@ if Partitia::Telemetry::Config.error_reporting?
     config.environment = Rails.env
     config.breadcrumbs_logger = %i[active_support_logger http_logger]
     config.send_default_pii = false
+    # Rails.error.report and Rails' own reported errors reach GlitchTip too
+    # (sentry-rails leaves this off by default)
+    config.rails.register_error_subscriber = true
   end
 end
