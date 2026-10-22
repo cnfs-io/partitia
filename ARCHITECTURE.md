@@ -162,16 +162,18 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 
 ## Wiring an app today
 
-Proven on two fresh `rails new` apps (2026-10-22): each generator run twice, the second
-changing nothing; both databases migrated; served with `pt server` on 0.0.0.0. D5 turns these
-steps into `pt new`.
+`pt new single <name>` or `pt new multi <name>` does all of this (D5): the `partitia` template
+adds the recipe's engines by gem name and runs the steps below; then `pt services` provisions
+Authentik and GlitchTip, `pt server` serves it and `pt smoke` checks it. What follows is what the
+template does, for reading or for wiring an existing app by hand. Proven on fresh apps
+(2026-10-22): each generator run twice, the second changing nothing; both databases migrated.
 
 **Single-tenant** (support, telemetry, iam, cognito): add the gems, then
 `partitia:support:install` (the registry line in every environment's primary database),
 `partitia:telemetry:install`, `partitia:iam:install`, `partitia:cognito:install` (mounts
-`/auth`, writes `config/partitia_cognito.yml`, filters `code`/`state`); `db:prepare`. Each
+`/auth`, writes `config/partitia_cognito.yml`, filters `code`/`state`/`nonce`); `db:prepare`. Each
 prints what is left: production secrets, `include Partitia::Iam::Authenticatable` where
-sign-in is required, the Authentik provider and client secret.
+sign-in is required; `pt services` registers the Authentik client (public, PKCE).
 
 **Multi-tenant** (+ tenanted): `partitia:tenanted:install` **first**, while `database.yml` is
 still stock (it writes the global and tenant planes; support's installer then finds them
