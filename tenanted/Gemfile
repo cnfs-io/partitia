@@ -1,0 +1,38 @@
+source "https://rubygems.org"
+
+# Specify your gem's dependencies in cnfs_tenanted.gemspec.
+gemspec
+
+gem "puma"
+
+gem "sqlite3"
+
+gem "propshaft"
+
+# Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
+gem "rubocop-rails-omakase", require: false
+
+group :development, :test do
+  gem "pry-rails"
+  gem "rspec-rails"
+end
+
+# Start debugger with binding.b [https://github.com/ruby/debug]
+# gem "debug", ">= 1.0.0"
+
+gem "cnfs_support", path: "../support"
+gem "cnfs_dev", path: "../dev"
+gem "cnfs_telemetry", path: "../telemetry"
+
+# Plan 004 integration — sibling gems wired into spec/dummy ONLY (never the
+# gemspec: cnfs_tenanted does not depend on iam or cnfs_cognito, ADR 0001 §5).
+gem "iam", path: "../iam"
+gem "cnfs_cognito", path: "../cognito"
+
+# Dummy-only: the one demonstration Pundit policy (WS1.4) and the WebMock OIDC
+# harness reused from cnfs_cognito's specs (WS2).
+gem "pundit"
+
+group :test do
+  gem "webmock"
+end

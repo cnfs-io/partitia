@@ -1,0 +1,98 @@
+# SQLite. Versions 3.8.0 and up are supported.
+#
+# Multi-tenant layout (cnfs_tenanted):
+#   tenant : TENANTED. One SQLite file per tenant (storage/<env>/%{tenant}.sqlite3).
+#   global : plain, untenanted. Holds the Tenant registry (storage/<env>.sqlite3).
+#
+# MIGRATIONS — two ways to source them (per database, via migrations_paths):
+#
+#   1. COPY-IN (the default below, the conventional Rails workflow)
+#      Each database points at a normal path in your app (db/migrate,
+#      db/global_migrate). YOUR APP OWNS these migrations. Pull the gems'
+#      migrations in the standard Rails way:
+#
+#        bin/rails cnfs_tenanted:install:migrations          # tenant (db/migrate)
+#        bin/rails railties:install:migrations               # all engines' tenant migs
+#        bin/rails cnfs_tenanted:install:global_migrations   # global (db/global_migrate)
+#
+#      (The first two are Rails' own tasks and copy only the standard db/migrate
+#      path; the global scope is non-standard, so the third task fills that gap,
+#      copying every CNFS engine's global migrations in one run.) Then edit and
+#      version the copies like any other migration in your repo.
+#
+#   2. IN-PLACE (uncomment the CnfsSupport.migrations_paths lines)
+#      Read migrations straight from the gems — nothing copied. Each gem's paths
+#      are collected into CnfsSupport.migrations_paths at boot (keyed by scope:
+#      :tenant -> db/migrate, :global -> db/global_migrate, declared by
+#      cnfs_tenanted's engine). A migration added to any CNFS gem is then picked
+#      up on `bundle update` with no re-copy. Trade-off: treat shipped
+#      migrations as append-only/immutable — editing a released one can desync
+#      existing tenant databases from new ones.
+#
+#      The ERB is evaluated when Rails reads this file (before initializers), by
+#      which point the registry is already populated at gem-load. To switch a
+#      database over, comment its hardcoded `migrations_paths` and uncomment the
+#      `CnfsSupport.migrations_paths[...]` line beneath it. The presence of that
+#      ERB is the whole switch — there is no separate config flag.
+
+default: &default
+  adapter: sqlite3
+  max_connections: <%%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+
+development:
+  global:
+    <<: *default
+    database: storage/development.sqlite3
+    migrations_paths: db/global_migrate
+    # In-place (read from the gems) — swap for the line above:
+    # migrations_paths: <%%= CnfsSupport.migrations_paths[:global] %>
+  tenant:
+    <<: *default
+    database: storage/development/%{tenant}.sqlite3
+    migrations_paths: db/migrate
+    # In-place (read from the gems) — swap for the line above:
+    # migrations_paths: <%%= CnfsSupport.migrations_paths[:tenant] %>
+    tenanted: true
+
+test:
+  global:
+    <<: *default
+    database: storage/test.sqlite3
+    migrations_paths: db/global_migrate
+    # In-place (read from the gems) — swap for the line above:
+    # migrations_paths: <%%= CnfsSupport.migrations_paths[:global] %>
+  tenant:
+    <<: *default
+    database: storage/test/%{tenant}.sqlite3
+    migrations_paths: db/migrate
+    # In-place (read from the gems) — swap for the line above:
+    # migrations_paths: <%%= CnfsSupport.migrations_paths[:tenant] %>
+    tenanted: true
+
+production:
+  global:
+    <<: *default
+    database: storage/production.sqlite3
+    migrations_paths: db/global_migrate
+    # In-place (read from the gems) — swap for the line above:
+    # migrations_paths: <%%= CnfsSupport.migrations_paths[:global] %>
+  tenant:
+    <<: *default
+    database: storage/production/%{tenant}.sqlite3
+    migrations_paths: db/migrate
+    # In-place (read from the gems) — swap for the line above:
+    # migrations_paths: <%%= CnfsSupport.migrations_paths[:tenant] %>
+    tenanted: true
+  cache:
+    <<: *default
+    database: storage/production_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: storage/production_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: storage/production_cable.sqlite3
+    migrations_paths: db/cable_migrate
