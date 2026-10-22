@@ -88,7 +88,10 @@ An engine meets every rule, or the exception is written here with its reason.
 - **Idempotent:** a second run changes nothing and asks nothing. Every write is guarded.
 - **Never overwrites a host file wholesale** (`force: true` on `template`, `create_file`,
   `copy_file` or `directory`); it injects into it, or stops and says what to change. `force:` on
-  `insert_into_file` is fine: it only lets the same line into a file twice.
+  `insert_into_file` is fine: it only lets the same line into a file twice. One exception: a file
+  that is still exactly what `rails new` wrote may be replaced (tenanted's `database.yml`); the
+  line says so with `# §5: stock file only`, and anything else stops with a non-zero exit and
+  the change to make.
 - Migrations reach the app through the registry (`migrations_paths` in `database.yml`), not by
   copying (Q3). The generator wires **every environment** (development, test, production), and
   every plane the engine has (a global plane is registered by the engine, never by a line in

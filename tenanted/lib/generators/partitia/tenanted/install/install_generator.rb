@@ -42,7 +42,7 @@ module Partitia
           when :tenanted
             say_status :skip, "#{DATABASE_YML} already has the global and tenant planes", :yellow
           when :missing, :stock
-            template "database.yml", DATABASE_YML, force: true
+            template "database.yml", DATABASE_YML, force: true # §5: stock file only
           else
             say database_change_instructions, :red
             raise Thor::Error, "#{DATABASE_YML} is customized; not changed. Apply the layout above and re-run."
