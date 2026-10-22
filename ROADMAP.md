@@ -40,7 +40,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       `path`/`cd`, `config`; bats suite
 - [x] `engine check [gem...]` — the contract's static checks per gem (naming, Ruby, lockfile
       platforms, CI matrix, test schema, no `force: true`, registration, install generator, ERB
-      views as a warning until D5); failures and warnings only unless `--all`; exit 1 on failure
+      views as a warning until D7); failures and warnings only unless `--all`; exit 1 on failure
 - [ ] `services` — the pcm services the app's engines declare, up/down
 - [ ] `smoke` — the D6 acceptance as a command. Cheap first: `/up` 200, `/auth/login` 302 to
       Authentik, a forced error lands in GlitchTip, a trace in Tempo (curl + `pcm exec`). A real
@@ -93,7 +93,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] Known from the rename: `partitia:tenanted:views` `source_root`; ui's `eager_load!`; tenanted's
       test DB
 - [x] The gaps table in `ARCHITECTURE.md`, engine by engine; what is left there is small or
-      belongs to D5 (ERB views, ui's installer)
+      belongs to D7 (ERB views, ui's installer)
 - [x] Small follow-ups from that table: cognito's unreachable IdP is a 503 (was a 500); dev
       loads `pry-byebug` only with the console; iam's README lists its integrations
 - [ ] tenanted's `trace` setting (may belong in telemetry's config, Q2)
@@ -148,18 +148,17 @@ Later (longer term):
 - [ ] Confidential OIDC clients: the hook generates and prints `CLIENT_SECRET`, `pt services`
       stores it in the app's credentials, cognito sends it at the token endpoint
 
-## D5 — Template shakedown
+## D5 — Recipes and template
+
+`pt new single|multi` produces a wired app with no manual steps. D6 depends on it; the UI does
+not (that is D7).
 
 - [ ] Engines by gem name through gem-local, not `~/spikes/chorus` paths; no `binding.pry`
-- [ ] The recipe selects engines (`partitia.yml` / `<app>.yml`)
-- [ ] Phlex + RubyUI layout and app shell; a Tailwind `@source` line for each engine. Source:
-      the earlier `fudge` app (`apps/fudge`): its `phlex.rb` and `ruby_ui.rb` initializers,
-      `Components::Base`/`Views::Base`, shadcn design tokens, the RubyUI component flow
-- [ ] Later, for support and ui: fudge's `TableDefinition` (declarative columns, param allowlist,
-      search and facets) and `Components::DataTable` (RubyUI DataTable, pagy), both marked there
-      for "eventual home" in the gems
-- [ ] When D5 has taken what it needs from `apps/` (single, multi, factory, fudge: the apps built on
-      the earlier gems, broken since the move), the person removes it
+- [ ] The recipe selects engines: `single` and `multi` recipes (`partitia.yml` / `<app>.yml`)
+- [ ] `~/.config/rails/templates/cnfs.rb` rewritten as `partitia.rb`: the engines' installers in
+      the D3 order (tenanted before anything that edits `database.yml`), then `db:prepare`
+- [ ] Proven like D3: a fresh `pt new single` and `pt new multi`, installers re-run with no
+      changes, `pt services`, `pt server`, `pt smoke`
 
 ## D6 — The demo
 
@@ -169,6 +168,20 @@ Later (longer term):
       regex redirect (`redirect_regex=` on the authentik hook, e.g.
       `http://[a-z0-9-]+\.localhost:3000/auth/callback`), each tenant keeping its own session.
       Production custom domains: later
+
+## D7 — UI: Phlex and RubyUI
+
+Last: nothing depends on it.
+
+- [ ] The ui install generator as the home of fudge's setup (`apps/fudge`): its `phlex.rb` and
+      `ruby_ui.rb` initializers, `Components::Base`/`Views::Base`, shadcn design tokens, the
+      RubyUI component flow; a Tailwind `@source` line for each engine
+- [ ] Phlex views for cognito's 503 page and tenanted's ERB views
+- [ ] Later, for support and ui: fudge's `TableDefinition` (declarative columns, param allowlist,
+      search and facets) and `Components::DataTable` (RubyUI DataTable, pagy), both marked there
+      for "eventual home" in the gems
+- [ ] When D7 has taken what it needs from `apps/` (single, multi, factory, fudge: the apps built on
+      the earlier gems, broken since the move), the person removes it
 
 ## Outside this repo
 
