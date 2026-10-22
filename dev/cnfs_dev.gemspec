@@ -32,5 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pry", ">= 0.16"
   spec.add_dependency "pry-rails", "~> 0.3"
   spec.add_dependency "pry-byebug", "~> 3.12"
-  spec.add_dependency "amazing_print", "~> 2.0"
+  spec.add_dependency "amazing_print", ">= 2", "< 4"
 end
