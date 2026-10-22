@@ -4,13 +4,13 @@ require "partitia/iam/engine"
 module Partitia
   module Iam
     # Engine-level configuration surface (ADR 0002 §4). Kept deliberately small:
-    # the URN partition/region and the server-side HMAC key for secret digests.
+    # the URN region and the server-side HMAC key for secret digests. The URN
+    # partition is the app's, not iam's: Partitia::Support::UrnConfig (ADR 0007).
     #
     # A Partitia::Support::Config subclass (anyway_config) so every value resolves from
     # config/partitia_iam.yml → credentials.partitia_iam → ENV["PARTITIA_IAM_*"] with one precedence — the
     # family convention. Secrets flow through credentials/ENV, never a literal.
     #
-    # partition  — first URN segment, host-configurable (default "cnfs").
     # region     — empty for IAM, mirroring AWS's global IAM service.
     # hmac_key   — server-side key for HMAC-SHA256 secret digests. In production
     #              this MUST come from Rails credentials / ENV. A fixed fallback is
@@ -28,7 +28,6 @@ module Partitia
       DEFAULT_HMAC_KEY = "iam-development-hmac-key-not-a-secret"
 
       attr_config :account_handle,
-                  partition: "cnfs",
                   region: "",
                   hmac_key: DEFAULT_HMAC_KEY,
                   session_key: :partitia_iam_user_id

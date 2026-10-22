@@ -1,6 +1,7 @@
 require_relative "support/version"
 require_relative "support/config"
 require_relative "support/redaction_config"
+require_relative "support/urn_config"
 require_relative "support/logging"
 require_relative "support/instrumentable"
 require_relative "support/shell"

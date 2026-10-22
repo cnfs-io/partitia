@@ -4,10 +4,21 @@ RSpec.describe Partitia::Iam::Urn do
   describe ".build" do
     it "produces the AWS-shaped grammar with an empty region for IAM" do
       urn = described_class.build(account: "a7f3k2xy", resource_type: "user", resource_id: "alice")
-      expect(urn).to eq("urn:cnfs:iam::a7f3k2xy:user/alice")
+      expect(urn).to eq("urn:partitia:iam::a7f3k2xy:user/alice")
     end
 
-    it "honours a host-configured partition" do
+    it "takes the app's partition from PARTITIA_URN_PARTITION" do
+      ENV["PARTITIA_URN_PARTITION"] = "acme"
+      Partitia::Support::UrnConfig.reset_instance!
+
+      urn = described_class.build(account: "a7f3k2xy", resource_type: "user", resource_id: "alice")
+      expect(urn).to eq("urn:acme:iam::a7f3k2xy:user/alice")
+    ensure
+      ENV.delete("PARTITIA_URN_PARTITION")
+      Partitia::Support::UrnConfig.reset_instance!
+    end
+
+    it "takes an explicit partition" do
       urn = described_class.build(account: "a7f3k2xy", resource_type: "user", resource_id: "alice", partition: "acme")
       expect(urn).to start_with("urn:acme:iam:")
     end
@@ -19,7 +30,7 @@ RSpec.describe Partitia::Iam::Urn do
       parsed = described_class.parse(urn)
 
       expect(parsed).to be_valid
-      expect(parsed.partition).to eq("cnfs")
+      expect(parsed.partition).to eq("partitia")
       expect(parsed.service).to eq("iam")
       expect(parsed.region).to eq("")
       expect(parsed.account).to eq("a7f3k2xy")
@@ -28,10 +39,10 @@ RSpec.describe Partitia::Iam::Urn do
     end
 
     it "rejects non-URN / foreign-service strings without raising" do
-      [ "", "nope", "urn:cnfs:s3::acct:bucket/x" ].each do |bad|
+      [ "", "nope", "urn:partitia:s3::acct:bucket/x" ].each do |bad|
         expect { described_class.parse(bad) }.not_to raise_error
       end
-      expect(described_class.parse("urn:cnfs:s3::acct:bucket/x")).not_to be_valid
+      expect(described_class.parse("urn:partitia:s3::acct:bucket/x")).not_to be_valid
       expect(described_class.parse("nope")).not_to be_valid
     end
   end

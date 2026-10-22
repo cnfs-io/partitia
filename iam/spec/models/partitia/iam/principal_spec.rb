@@ -30,8 +30,8 @@ RSpec.describe Partitia::Iam::Principal do
       human = Partitia::Iam::HumanPrincipal.create!(name: "alice")
       machine = Partitia::Iam::MachinePrincipal.create!(name: "worker")
 
-      expect(human.to_urn).to eq("urn:cnfs:iam::handle01:user/#{human.id}")
-      expect(machine.to_urn).to eq("urn:cnfs:iam::handle01:machine/#{machine.id}")
+      expect(human.to_urn).to eq("urn:partitia:iam::handle01:user/#{human.id}")
+      expect(machine.to_urn).to eq("urn:partitia:iam::handle01:machine/#{machine.id}")
     ensure
       Partitia::Iam.config.account_handle = nil
     end
@@ -42,6 +42,17 @@ RSpec.describe Partitia::Iam::Principal do
       # A machine URN must not resolve through the human scope.
       machine = Partitia::Iam::MachinePrincipal.create!(name: "worker")
       expect(Partitia::Iam::HumanPrincipal.find_by_urn(machine.to_urn)).to be_nil
+    end
+
+    it "does not resolve a URN from another partition, service or account" do
+      human = Partitia::Iam::HumanPrincipal.create!(name: "alice")
+      parsed = Partitia::Iam::Urn.parse(human.to_urn)
+      build = ->(**over) { Partitia::Iam::Urn.build(**{ account: parsed.account, resource_type: parsed.resource_type, resource_id: parsed.resource_id }.merge(over)) }
+
+      expect(Partitia::Iam::HumanPrincipal.find_by_urn(build.call)).to eq(human)
+      expect(Partitia::Iam::HumanPrincipal.find_by_urn(build.call(partition: "other"))).to be_nil
+      expect(Partitia::Iam::HumanPrincipal.find_by_urn(build.call(account: "elsewhere"))).to be_nil
+      expect(Partitia::Iam::HumanPrincipal.find_by_urn(human.to_urn.sub(":iam:", ":s3:"))).to be_nil
     end
   end
 

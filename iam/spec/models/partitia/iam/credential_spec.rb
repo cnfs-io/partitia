@@ -73,7 +73,7 @@ RSpec.describe Partitia::Iam::Credential do
     it "uses access_key as resource_type and the access_key_id as resource_id" do
       Partitia::Iam.config.account_handle = "handle01"
       credential = described_class.create!(owner: owner)
-      expect(credential.to_urn).to eq("urn:cnfs:iam::handle01:access_key/#{credential.access_key_id}")
+      expect(credential.to_urn).to eq("urn:partitia:iam::handle01:access_key/#{credential.access_key_id}")
     ensure
       Partitia::Iam.config.account_handle = nil
     end

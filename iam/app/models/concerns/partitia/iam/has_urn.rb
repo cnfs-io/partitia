@@ -34,11 +34,15 @@ module Partitia
           urn_resource_type_token || name.demodulize.underscore
         end
 
-        # Find a record by its URN, scoped to this model's resource type. Returns
-        # nil for a malformed URN or a resource_type mismatch.
+        # Find a record by its URN. Returns nil unless the URN is well formed and
+        # is this app's (partition), this service's, this account's and this
+        # model's (resource type): a URN minted elsewhere never resolves here.
         def find_by_urn(urn_string)
           parsed = Partitia::Iam::Urn.parse(urn_string)
-          return nil unless parsed.valid? && parsed.resource_type == default_urn_resource_type
+          return nil unless parsed.valid?
+          return nil unless parsed.partition == Partitia::Support::UrnConfig.partition
+          return nil unless parsed.account == Partitia::Iam.current_account_handle
+          return nil unless parsed.resource_type == default_urn_resource_type
 
           find_by(urn_id_attribute => parsed.resource_id)
         end

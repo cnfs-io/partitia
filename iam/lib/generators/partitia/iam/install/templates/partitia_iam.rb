@@ -23,11 +23,10 @@
 # below is an equivalent code-level override — uncomment a line to pin a value.
 #
 # Partitia::Iam.configure do |c|
-#   # URN partition — the first segment of every URN
-#   # (urn:<partition>:iam::<account>:<resource_type>/<resource_id>).
-#   # Host-configurable; defaults to "cnfs". Region stays empty for IAM,
-#   # mirroring AWS's global IAM service.
-#   c.partition = "cnfs"
+#   # The URN partition (urn:<partition>:iam::<account>:<resource_type>/<resource_id>)
+#   # is the app's, not iam's: config/partitia_urn.yml or PARTITIA_URN_PARTITION
+#   # (default "partitia"). Region stays empty for IAM, mirroring AWS's global
+#   # IAM service.
 #
 #   # Single-tenant account handle. Left nil, iam mints a real handle once and
 #   # memoises it (ADR 0002 §2 — a real handle, never a sentinel). Pin it for a

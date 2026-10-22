@@ -10,7 +10,6 @@ RSpec.describe Partitia::Iam::Config do
   it "exposes the family defaults when nothing is set" do
     described_class.reset_instance!
 
-    expect(described_class.partition).to eq("cnfs")
     expect(described_class.region).to eq("")
     expect(described_class.session_key).to eq(:partitia_iam_user_id)
     expect(described_class.account_handle).to be_nil
@@ -31,13 +30,17 @@ RSpec.describe Partitia::Iam::Config do
     ENV.delete("PARTITIA_IAM_HMAC_KEY")
   end
 
-  it "overrides a non-secret default from ENV (PARTITIA_IAM_PARTITION)" do
-    ENV["PARTITIA_IAM_PARTITION"] = "acme"
+  it "overrides a non-secret default from ENV (PARTITIA_IAM_REGION)" do
+    ENV["PARTITIA_IAM_REGION"] = "ap-southeast-1"
     described_class.reset_instance!
 
-    expect(described_class.partition).to eq("acme")
+    expect(described_class.region).to eq("ap-southeast-1")
   ensure
-    ENV.delete("PARTITIA_IAM_PARTITION")
+    ENV.delete("PARTITIA_IAM_REGION")
+  end
+
+  it "has no partition of its own (the app's is Partitia::Support::UrnConfig)" do
+    expect(described_class.instance).not_to respond_to(:partition)
   end
 
   # The gem and its specs read/write through Partitia::Iam.config; keep that API intact.

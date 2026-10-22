@@ -3,9 +3,9 @@ module Partitia
     # URN grammar value object (ADR 0002 §4) — our analog to an AWS ARN:
     #
     #   urn:<partition>:iam:<region>:<account>:<resource_type>/<resource_id>
-    #   e.g. urn:cnfs:iam::a7f3k2xy:user/alice
+    #   e.g. urn:partitia:iam::a7f3k2xy:user/alice
     #
-    # - partition — host-configurable (default "cnfs")
+    # - partition — the app's, from Partitia::Support::UrnConfig (default "partitia"; ADR 0007)
     # - iam       — fixed service namespace for this engine
     # - region    — empty for IAM, mirroring AWS's global IAM service
     # - account   — the account handle (ADR 0002 §1); real from day one (§2)
@@ -22,7 +22,7 @@ module Partitia
 
       module_function
 
-      def build(account:, resource_type:, resource_id:, partition: Partitia::Iam.config.partition, region: Partitia::Iam.config.region)
+      def build(account:, resource_type:, resource_id:, partition: Partitia::Support::UrnConfig.partition, region: Partitia::Iam.config.region)
         "urn:#{partition}:#{SERVICE}:#{region}:#{account}:#{resource_type}/#{resource_id}"
       end
 
