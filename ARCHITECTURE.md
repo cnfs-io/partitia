@@ -72,7 +72,8 @@ An engine meets every rule, or the exception is written here with its reason.
 - Settings live in one `Partitia::Support::Config` subclass, `config_name :partitia_<name>` (an
   engine with no settings has none; callables are not settings, see below). Values resolve from
   `config/partitia_<name>.yml`, then credentials, then `PARTITIA_<NAME>_*`; nothing reads ENV
-  directly.
+  directly. One exception: telemetry steps aside for the standard `OTEL_*` variables when they
+  are set, as OpenTelemetry's own convention says.
 - Secrets only from credentials or ENV. A development fallback is allowed only when it is
   labelled not-a-secret and production refuses it.
 - Endpoints default to the pcm service a developer runs (`stack/telemetry`, `stack/authentik`,
@@ -85,8 +86,9 @@ An engine meets every rule, or the exception is written here with its reason.
 
 - `partitia:<name>:install` exists, even when it has little to do.
 - **Idempotent:** a second run changes nothing and asks nothing. Every write is guarded.
-- **Never overwrites a host file wholesale** (`force: true`); it injects into it, or stops and
-  says what to change.
+- **Never overwrites a host file wholesale** (`force: true` on `template`, `create_file`,
+  `copy_file` or `directory`); it injects into it, or stops and says what to change. `force:` on
+  `insert_into_file` is fine: it only lets the same line into a file twice.
 - Migrations reach the app through the registry (`migrations_paths` in `database.yml`), not by
   copying (Q3). The generator wires **every environment** (development, test, production), and
   every plane the engine has (a global plane is registered by the engine, never by a line in
@@ -147,13 +149,13 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 
 | Engine | Gaps |
 |---|---|
-| support | Install generator only finds the sqlite development line in `database.yml` and says nothing when it can't, and wires development only (§5). It is a railtie, not an engine, so §3, §6 and §8 don't apply |
-| dev | Exempt from §3–§6 and §9 (Q1). No specs |
-| telemetry | No dependency on support, so its span bridge can't check `RedactionConfig` (§2, §7). No config class: the generator writes an initializer reading `OTEL_*`, and nothing covers the error tracker (§4, §7). Generator re-run relies on Thor's conflict prompt (§5). No `partitia.services` (§9) |
+| support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
+| dev | Exempt from §3–§6 and §9 (Q1). Has specs now. `require "pry-byebug"` runs whenever the gem loads, not only in the console; no public `Partitia::Dev.reset!` |
+| telemetry | Not yet installed into a fresh app (D3). The GlitchTip DSN is a manual step until pcm provisions GlitchTip (D4) |
 | tenanted | Not isolated (by design: `tenants` routes drawn into the host). Install writes `database.yml` with `force: true` (§5); writes controllers and an initializer unguarded (§5). Views are ERB (§8). No config class: module accessors only (§4). `views` generator offers `accounts`, which the gem doesn't have, and rejects `tenant_not_found`, which its own template tells you to run |
-| iam | Install writes only a commented initializer; its credentials key says `iam:` instead of `partitia_iam:` (§4). Layout is ERB (§8). `lockbox` declared but unused (§2) |
-| cognito | Not registered (§3). Install writes the initializer unguarded, doesn't filter `code`/`state` from logs and doesn't print the login path (§5). The dummy's Authentik harness is its own docker compose (Authentik 2024.10.5) instead of pcm's `stack/authentik` (§4, §9). No `partitia.services` |
-| ui | Shelved. Not registered, so its components never reach Tailwind (§3). Its top-level `Views`, `Components`, `RubyUI` are the allowed exception (Q4). No install generator |
+| iam | Layout is ERB (§8, D5). README is the Rails stub, so the integrations list (§2) is missing |
+| cognito | None (D3 done). Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |
+| ui | Shelved. No install generator (§5): `partitia:ui:install` is where D5's app setup (Phlex/RubyUI namespaces, the host's `app/components/ruby_ui`, tokens) belongs |
 
 ## Wiring an app today
 

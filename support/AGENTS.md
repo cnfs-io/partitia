@@ -129,9 +129,6 @@ how a later session would know the claim stopped being true.
 
 ### features in flux (provisional — not scored)
 
-- **Redaction consumption** is an open arc. `RedactionConfig` *defines* the
-  sensitive-field surface (shipped as plan 006 WS3), but nothing in `partitia-support`
-  yet **reads** it — the enrichment/redaction guards that consume
-  `sensitive_fields` land in plan 008. Until then, any claim that PII is actually
-  redacted at emission is PROVISIONAL; today the gem only publishes the list.
-  tracking: `../../doc/archive/plans/008-telemetry-enrichment-dashboards.md`
+- **Redaction consumption**: `RedactionConfig.sensitive_fields` is read by partitia-telemetry's
+  span bridge (sensitive payload keys never become span attributes) and by iam's and cognito's
+  enrichment guards.
