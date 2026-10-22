@@ -105,6 +105,24 @@ the pcm services this gem talks to: `stack/telemetry` (OTLP collector, Tempo,
 Grafana) and `stack/glitchtip` (errors). `pcm show telemetry` / `pcm show glitchtip`
 give their URLs.
 
+## Dashboards
+
+`dashboards/` holds the Grafana dashboards for the `partitia_*` spans, provisioned by
+pcm's `stack/telemetry` (`pt services` points its `GRAFANA_DASHBOARDS_DIR` here; Grafana
+rereads the dir every 30 s). Both query Tempo with TraceQL metrics (Tempo 3's
+live-store: recent data only, no Prometheus) and filter on a `service.name` variable:
+
+- **Partitia / Overview**: span rate, p95 latency, errored spans and spans per service,
+  by event name; the request span (`partitia_tenanted.telemetry_middleware.request`,
+  with `config.partitia_tenanted.trace`); recent errored and slow traces.
+- **Partitia / Identity**: sign-in outcomes and latency (cognito's callback), login
+  starts, IdP calls, token verification and code exchange; iam's identity resolution
+  and authorization gate; tenanted's tenant resolution, by outcome and by tenant.
+
+An attribute is `<event name>.<payload key>` (`span.partitia_cognito.sessions_controller.callback.outcome`).
+The app's own requests have no span unless it adds OTel's Rack/Rails instrumentation
+(see `config/initializers/opentelemetry.rb`).
+
 ## Configuration
 
 `Partitia::Telemetry::Config` (a `Partitia::Support::Config`, `config_name
