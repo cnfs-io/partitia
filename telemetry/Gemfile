@@ -1,0 +1,30 @@
+source "https://rubygems.org"
+
+# Specify your gem's dependencies in cnfs_telemetry.gemspec.
+gemspec
+
+gem "puma"
+
+gem "sqlite3"
+
+# Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
+gem "rubocop-rails-omakase", require: false
+
+# Start debugger with binding.b [https://github.com/ruby/debug]
+# gem "debug", ">= 1.0.0"
+
+group :development, :test do
+  gem "factory_bot_rails"
+  gem "rspec-rails"
+
+  # SDK + in-memory exporter, present in the suite ONLY, to prove spans actually
+  # emit when a host opts in. The gem itself never depends on the SDK.
+  gem "opentelemetry-sdk"
+end
+
+group :development do
+  gem "ruby-lsp-rspec", require: false
+  gem "ruby-lsp-rails", require: false
+end
+gem "amazing_print"
+gem "pry-rails"
