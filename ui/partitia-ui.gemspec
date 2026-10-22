@@ -24,6 +24,8 @@ Gem::Specification.new do |spec|
   end
 
   spec.add_dependency "rails", ">= 8.1.3"
+  # The plugin registry: registering puts app/components on Partitia::Support.source_paths (Tailwind).
+  spec.add_dependency "partitia-support"
   spec.add_dependency "phlex-rails", "~> 2.4"
   spec.add_dependency "turbo-rails"
   spec.add_dependency "stimulus-rails"

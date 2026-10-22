@@ -14,7 +14,7 @@
 # here — source the real key from Rails credentials (never inline a literal):
 #
 #   bin/rails credentials:edit
-#     iam:
+#     partitia_iam:
 #       hmac_key: <value>
 #
 # or supply PARTITIA_IAM_HMAC_KEY in the environment.

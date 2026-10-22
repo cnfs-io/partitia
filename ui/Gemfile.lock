@@ -21,6 +21,7 @@ PATH
   specs:
     partitia-ui (0.1.0)
       importmap-rails
+      partitia-support
       phlex-rails (~> 2.4)
       rails (>= 8.1.3)
       stimulus-rails

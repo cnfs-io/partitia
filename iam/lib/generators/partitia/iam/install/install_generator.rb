@@ -7,40 +7,65 @@ module Partitia
       #
       #   bin/rails generate partitia:iam:install
       #
-      #   - config/initializers/partitia_iam.rb   (app-owned Partitia::Iam.configure block)
+      #   - config/initializers/partitia_iam.rb   (app-owned, documents the HMAC key
+      #     and the host-tunable knobs; written once, never overwritten)
+      #   - checks config/database.yml reads Partitia::Support.migrations_paths, the
+      #     registry iam's migrations reach the app through (ARCHITECTURE §5, Q3).
+      #     iam never copies migrations, and leaves database.yml to
+      #     partitia:support:install, which owns it.
+      #
+      # Idempotent: a second run changes nothing and asks nothing.
       #
       # iam works with NO initializer in dev/test — the HMAC key falls back to a
       # non-secret development key and the single-tenant account handle is minted
-      # and memoised on first use (ADR 0002 §2). This generator exists to make the
-      # production-critical seam (the HMAC key) and the two host-tunable knobs
-      # (URN partition, pinned account handle) VISIBLE and editable in the app,
-      # rather than buried in the gem's defaults.
-      #
-      # The initializer is shipped as a template (single source of truth); each app
-      # gets its own editable copy. Nothing here is loaded from the packaged gem at
-      # runtime — it is all generator source.
+      # and memoised on first use (ADR 0002 §2).
       class InstallGenerator < Rails::Generators::Base
         source_root File.expand_path("templates", __dir__)
 
-        desc "Install the app-owned Partitia::Iam.configure initializer (HMAC key, URN " \
-             "partition, single-tenant account handle)."
+        INITIALIZER = "config/initializers/partitia_iam.rb".freeze
+        DATABASE_YML = "config/database.yml".freeze
+        REGISTRY = "Partitia::Support.migrations_paths".freeze
+
+        desc "Install the app-owned partitia-iam initializer and check database.yml " \
+             "reads iam's migrations from the partitia-support registry."
 
         def create_initializer
-          template "partitia_iam.rb", "config/initializers/partitia_iam.rb"
+          if File.exist?(File.join(destination_root, INITIALIZER))
+            say_status :skip, "#{INITIALIZER} exists", :blue
+          else
+            template "partitia_iam.rb", INITIALIZER
+          end
+        end
+
+        def check_migrations_paths
+          @registry_wired = File.exist?(database_yml) && File.read(database_yml).include?(REGISTRY)
+          if @registry_wired
+            say_status :ok, "#{DATABASE_YML} reads #{REGISTRY}", :blue
+          else
+            say_status :missing, "#{DATABASE_YML} does not read #{REGISTRY}", :yellow
+          end
         end
 
         def print_post_install
           say ""
-          say "partitia-iam installed.", :green
-          say "  - config/initializers/partitia_iam.rb  (app-owned Partitia::Iam.configure; edit freely)"
-          say ""
-          say "IMPORTANT for production:", :yellow
-          say "  Set a real HMAC key via the PARTITIA_IAM_HMAC_KEY env var or Rails"
-          say "  credentials. The development fallback is NOT a secret — rotating"
-          say "  to it in production would let anyone forge machine-credential"
-          say "  secret digests."
+          say "partitia-iam installed. Still to do:", :green
+          unless @registry_wired
+            say "  - bin/rails generate partitia:support:install  (points database.yml at the"
+            say "    engines' migrations), then bin/rails db:migrate"
+          end
+          say "  - Production: set PARTITIA_IAM_HMAC_KEY or credentials.partitia_iam.hmac_key."
+          say "    The development fallback is NOT a secret; production must not use it."
+          say "  - In each protected controller:"
+          say "      include Partitia::Iam::Authenticatable"
+          say "      before_action :require_authentication"
+          say "  - Set the app's URN partition: PARTITIA_URN_PARTITION or"
+          say "    config/partitia_urn.yml (ADR 0007; default \"#{Partitia::Support::UrnConfig::DEFAULT_PARTITION}\")."
           say ""
         end
+
+        private
+
+        def database_yml = File.join(destination_root, DATABASE_YML)
       end
     end
   end

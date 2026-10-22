@@ -29,10 +29,6 @@ Gem::Specification.new do |spec|
   # Optional, detected at runtime with defined? and deliberately NOT declared:
   # partitia-tenanted (after_provision seeding, tenant account handle) and
   # partitia-dev (console shortcuts).
-  # Encrypted attributes on IAM-owned models (credentials, tokens). The gem
-  # declares has_encrypted; the host app owns the master key (LockboxConfig
-  # + initializer), since Lockbox.master_key is process-global.
-  spec.add_dependency "lockbox", "~> 2.0"
   spec.add_dependency "turbo-rails"
   spec.add_dependency "stimulus-rails"
   spec.add_dependency "importmap-rails"
