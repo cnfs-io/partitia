@@ -42,7 +42,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       platforms, CI matrix, test schema, no `force: true`, registration, install generator, ERB
       views as a warning until D5); failures and warnings only unless `--all`; exit 1 on failure
 - [ ] `services` — the pcm services the app's engines declare, up/down
-- [ ] `smoke` — the D6 acceptance as a command
+- [ ] `smoke` — the D6 acceptance as a command. Cheap first: `/up` 200, `/auth/login` 302 to
+      Authentik, a forced error lands in GlitchTip, a trace in Tempo (curl + `pcm exec`). A real
+      headless login as the bootstrap admin is later
 - [x] `ci [gem...]` — what CI runs (Ruby and gem matrix from `.github/workflows/ci.yml`), in
       pcm's `ruby-ci` job container via `pcm run`: fresh clone, frozen bundle, rspec, rubocop;
       a GEM STATUS SPECS LINT table, exit 1 on failure. Gems are cached per Ruby, so a warm run
@@ -115,8 +117,17 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [ ] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
       wizard)
 - [ ] `pt services`: provisions each installed engine's services through pcm's public commands
-      only (`pcm provision`/`deprovision`, requested as anfs r-20261022-2); results go to the
-      app's local env, never committed
+      only (`pcm provision`/`deprovision`, pcm 0.3.0); never commits a secret.
+      - Non-secrets (issuer, client_id) are deterministic for pcm and already written by the
+        installers; `pt services` checks they agree.
+      - Secrets (the DSN; later CLIENT_SECRET) go to a store, `PARTITIA_SECRETS_STORE`:
+        `local` (default): `config/partitia_<engine>.local.yml`, `/config/*.local.yml` gitignored;
+        `fnox`: piped to `fnox set` in the app's `fnox.toml` with the space's provider (1Password
+        through its service-account token), so fnox exports `PARTITIA_<ENGINE>_*`. Both reach
+        the engines through anyway_config with no engine code; `pt server` runs under
+        `fnox exec` when a `fnox.toml` is present
+      - First run points `GRAFANA_DASHBOARDS_DIR` (`~/.config/pcm/env/telemetry.env`) at
+        `telemetry/dashboards/` in this repo
 
 How it is built:
 
@@ -153,8 +164,10 @@ Later (longer term):
 
 - [ ] `single`: `pt new single` → `pt server` → Authentik login, a trace in Grafana, an error in
       GlitchTip; scripted as `pt smoke`
-- [ ] `multi`: tenant from subdomain (`*.localhost`), and Authentik redirect URIs across tenant
-      subdomains (callback on the apex, or a regex redirect)
+- [ ] `multi`: tenant from subdomain (`*.localhost`); Authentik accepts every tenant through one
+      regex redirect (`redirect_regex=` on the authentik hook, e.g.
+      `http://[a-z0-9-]+\.localhost:3000/auth/callback`), each tenant keeping its own session.
+      Production custom domains: later
 
 ## Outside this repo
 
