@@ -9,6 +9,11 @@ RSpec.describe Partitia::Tenanted::Resolvers::Subdomain do
     expect(resolve("acme.example.com")).to eq("acme")
   end
 
+  it "resolves a *.localhost host (development), which no public suffix lists" do
+    expect(resolve("acme.localhost")).to eq("acme")
+    expect(resolve("localhost")).to be_nil
+  end
+
   it "excludes www by default" do
     expect(resolve("www.example.com")).to be_nil
   end

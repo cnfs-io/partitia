@@ -57,7 +57,9 @@ module Partitia
           return nil if host.empty? || ip_host?(host)
 
           if public_suffix_available?
-            parsed = PublicSuffix.parse(host, ignore_private: true)
+            # default_rule: nil: an unlisted TLD (*.localhost in dev) raises and takes the
+            # fallback; with the default "*" rule it parsed as acme.localhost = no subdomain
+            parsed = PublicSuffix.parse(host, ignore_private: true, default_rule: nil)
             present_or_nil(parsed.trd) # trd = "transit registrable domain" == subdomain(s)
           else
             fallback_subdomain(request, host)
@@ -74,6 +76,10 @@ module Partitia
         # (host apps configure tld_length for *.localhost — see development.rb),
         # otherwise treat everything left of the last two labels as the subdomain.
         def fallback_subdomain(request, host)
+          # localhost is a one-label TLD (RFC 6761): acme.localhost is tenant acme, whatever
+          # the app's tld_length
+          return present_or_nil(host.delete_suffix(".localhost")) if host.end_with?(".localhost")
+
           if request.respond_to?(:subdomain)
             ad = request.subdomain.to_s
             return present_or_nil(ad) unless ad.empty?
