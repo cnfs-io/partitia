@@ -154,7 +154,7 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 |---|---|
 | support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
 | dev | Exempt from §3–§6 and §9 (Q1). Has specs now. No public `Partitia::Dev.reset!` |
-| telemetry | Not yet installed into a fresh app (D3). The GlitchTip DSN is a manual step until pcm provisions GlitchTip (D4) |
+| telemetry | None (D4 done): installed into fresh apps; `pt services` provisions GlitchTip and stores the DSN; traces and errors proven end to end (`pt smoke`) |
 | tenanted | Views are ERB (§8, D7). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. `config.partitia_tenanted.trace` is an observability setting that may belong in telemetry's config (§4, Q2). Migration status also lists activerecord-tenanted's `development-tenant` template database |
 | iam | Layout is ERB (§8, D7). README is otherwise the Rails stub (its Integrations section, §2, is written) |
 | cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |

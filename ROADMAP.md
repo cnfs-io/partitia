@@ -41,10 +41,12 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] `engine check [gem...]` — the contract's static checks per gem (naming, Ruby, lockfile
       platforms, CI matrix, test schema, no `force: true`, registration, install generator, ERB
       views as a warning until D7); failures and warnings only unless `--all`; exit 1 on failure
-- [ ] `services` — the pcm services the app's engines declare, up/down
-- [ ] `smoke` — the D6 acceptance as a command. Cheap first: `/up` 200, `/auth/login` 302 to
-      Authentik, a forced error lands in GlitchTip, a trace in Tempo (curl + `pcm exec`). A real
-      headless login as the bootstrap admin is later
+- [x] `services` — the pcm services the app's engines declare, up/down (`--down` also takes the
+      DSN out of the secrets store)
+- [x] `smoke [app]` — the D6 acceptance as a command. Cheap first: `/up` 200, `/auth/login` 302 to
+      Authentik, a forced error lands in GlitchTip, a trace in Tempo (curl + `pcm exec`); CHECK
+      STATUS DETAIL, exit 1 on failure, about 35 s. A real headless login as the bootstrap admin
+      is later
 - [x] `ci [gem...]` — what CI runs (Ruby and gem matrix from `.github/workflows/ci.yml`), in
       pcm's `ruby-ci` job container via `pcm run`: fresh clone, frozen bundle, rspec, rubocop;
       a GEM STATUS SPECS LINT table, exit 1 on failure. Gems are cached per Ruby, so a warm run
@@ -111,13 +113,16 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 
 ## D4 — pcm wiring
 
-- [ ] telemetry: OTLP to `stack/telemetry` (`localhost:4318`); the app sets `service.name`
-- [ ] Grafana dashboards in this repo, provisioned through `GRAFANA_DASHBOARDS_DIR`, querying the
-      `partitia_*` span names (the old `cnfs-*` dashboards are gone and queried `cnfs_*`)
-- [ ] errors: `sentry-rails` to `stack/glitchtip`
+- [x] telemetry: OTLP to `stack/telemetry` (`localhost:4318`); the app sets `service.name`
+- [x] Grafana dashboards in this repo, provisioned through `GRAFANA_DASHBOARDS_DIR`, querying the
+      `partitia_*` span names (the old `cnfs-*` dashboards are gone and queried `cnfs_*`):
+      `telemetry/dashboards/`, Partitia / Overview and Partitia / Identity
+- [x] errors: `sentry-rails` to `stack/glitchtip`, including `Rails.error.report` (the generated
+      `sentry.rb` sets `register_error_subscriber`, off in sentry-rails)
 - [ ] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
-      wizard)
-- [ ] `pt services`: provisions each installed engine's services through pcm's public commands
+      wizard). `pt services` provisions it and `/auth/login` redirects to it with the client
+      (`pt smoke`); a real sign-in through it is not proven yet (D6)
+- [x] `pt services`: provisions each installed engine's services through pcm's public commands
       only (`pcm provision`/`deprovision`, pcm 0.3.0); never commits a secret.
       - Non-secrets (issuer, client_id) are deterministic for pcm and already written by the
         installers; `pt services` checks they agree.
@@ -142,6 +147,35 @@ How it is built:
   in cognito's config. Only `public` (PKCE, no secret) is implemented; `confidential` is
   rejected with "not yet supported", leaving room for the secret to flow through `pt services`
   into credentials later
+
+**What an agent needs to know (D4):**
+- The loop is `pcm up telemetry` → `pt services` → `pt server` → `pt smoke`. Grafana is
+  <http://localhost:8080> (anonymous); Tempo publishes no port: query it through Grafana's
+  datasource proxy (`/api/datasources/proxy/uid/tempo/api/search`) or
+  `pcm exec -s grafana telemetry -- wget -qO- http://tempo:3200/...`.
+- A trace shows in Tempo about 30 s after the request (5 s batch export, then the live-store);
+  an empty search right after a request means wait, not broken. `smoke` polls for 120 s.
+- Only `partitia_*` events become spans. A request with no engine event (`/up`, the app's own
+  controllers) has no trace unless the app adds OTel's Rack/Rails instrumentation (commented in
+  `opentelemetry.rb`) or turns on tenanted's request span (`config.partitia_tenanted.trace`).
+  `/auth/login` gives `partitia_cognito.sessions_controller.login_start` and the IdP discovery
+  call; that is the trace `smoke` looks for.
+- Span attributes are `<event name>.<payload key>`
+  (`span.partitia_cognito.sessions_controller.callback.outcome`); the dashboards group by them.
+  Tempo 3 serves TraceQL metrics (`| rate()`, `quantile_over_time`) from its live-store with no
+  Prometheus or metrics-generator: dashboards cover recent data only (1 h retention).
+- Grafana runs TraceQL *search* panels in the browser; `/api/ds/query` answers them with "backend
+  TraceQL search queries are not supported". Check metrics panels through `/api/ds/query`,
+  search panels through the proxy.
+- The forced error is `Rails.error.report` through `bin/rails runner` (one GlitchTip issue,
+  "pt smoke: a forced error", one event a run). An app made before the `sentry.rb` change lacks
+  `register_error_subscriber` and reports nothing that way: add the line, or delete `sentry.rb`
+  and re-run `partitia:telemetry:install`.
+- GlitchTip's events for an app: `pcm exec -s web glitchtip -- ./manage.py shell -c ...` with
+  `IssueEvent.objects.filter(issue__project__organization__slug="partitia",
+  issue__project__slug=<slug>)`.
+- Container logs: `podman compose --pcm logs <service>` is a zsh function from
+  `~/.config/zsh/pcm.zsh`; a non-interactive shell has to source it first.
 
 Later (longer term):
 
