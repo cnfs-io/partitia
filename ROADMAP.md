@@ -77,7 +77,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 
 - [x] Drafted from the code: `ARCHITECTURE.md` (layers, contract §1–§10, each engine's gaps,
       today's wiring, questions Q1–Q7); repo `AGENTS.md`; support's `CLAUDE.md` is its `AGENTS.md`
-- [ ] Reviewed together; Q1–Q7 answered; status from Draft to Agreed
+- [x] Reviewed together; Q1–Q7 answered (with the evidence from the earlier apps); Agreed
 
 ## D3 — Each engine meets the contract on its own
 
@@ -87,6 +87,8 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [ ] Known from the rename: `partitia:tenanted:views` has no `source_root`; ui's `eager_load!`
       fails on the RubyUI Button (tenanted's test DB is fixed: `maintain_test_schema!`)
 - [ ] The gaps table in `ARCHITECTURE.md`, engine by engine
+- [ ] tenanted: migration status for tenant databases (`db:migrate:status` across tenants;
+      activerecord-tenanted has none), from the earlier `factory` app's `tenant_migrate.rake`
 
 ## D4 — pcm wiring
 
@@ -101,7 +103,14 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 
 - [ ] Engines by gem name through gem-local, not `~/spikes/chorus` paths; no `binding.pry`
 - [ ] The recipe selects engines (`partitia.yml` / `<app>.yml`)
-- [ ] Phlex + RubyUI layout and app shell; a Tailwind `@source` line for each engine
+- [ ] Phlex + RubyUI layout and app shell; a Tailwind `@source` line for each engine. Source:
+      the earlier `fudge` app (`apps/fudge`): its `phlex.rb` and `ruby_ui.rb` initializers,
+      `Components::Base`/`Views::Base`, shadcn design tokens, the RubyUI component flow
+- [ ] Later, for support and ui: fudge's `TableDefinition` (declarative columns, param allowlist,
+      search and facets) and `Components::DataTable` (RubyUI DataTable, pagy), both marked there
+      for "eventual home" in the gems
+- [ ] When D5 has taken what it needs from `apps/` (single, multi, factory, fudge: the apps built on
+      the earlier gems, broken since the move), the person removes it
 
 ## D6 — The demo
 

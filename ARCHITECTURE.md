@@ -1,7 +1,7 @@
 # Architecture
 
-**Status: Draft for review (2026-10-22).** Nothing is checked against this until it is agreed;
-then `pt engine check` (D0) enforces the contract below.
+**Status: Agreed (2026-10-22).** `pt engine check` (D0) is to enforce the contract below. The
+decisions behind it, with the evidence from the earlier apps, are at the end.
 
 Partitia is a family of Rails engines that apps compose. Each engine is a gem in this repo
 (`<dir>/partitia-<dir>.gemspec`), developed against a `spec/dummy` app, and installed into an
@@ -22,7 +22,7 @@ on no sibling. Within a layer an engine may integrate with another only optional
 graph BT
   support
   dev
-  telemetry -. proposed, Q2 .-> support
+  telemetry --> support
   tenanted --> support
   iam --> support
   cognito --> support
@@ -39,7 +39,9 @@ An engine meets every rule, or the exception is written here with its reason.
 
 - Gem `partitia-<name>`, module `Partitia::<Name>`, require `partitia/<name>`. `Iam`, `Ui`: no
   acronym inflections (they change the host's inflections).
-- No top-level constants. Tables `partitia_<name>_*`; events, spans and log tags
+- No top-level constants, with one exception: the Phlex/RubyUI host namespaces `Views`,
+  `Components` and `RubyUI`, which those libraries expect at the top of the app (Q4). Tables
+  `partitia_<name>_*`; events, spans and log tags
   `partitia_<name>.*`; config `partitia_<name>` (`config/partitia_<name>.yml`,
   `PARTITIA_<NAME>_*`); generators `partitia:<name>:<generator>`; rake `partitia:<name>:*`.
 
@@ -54,9 +56,14 @@ An engine meets every rule, or the exception is written here with its reason.
 
 ### 3. Registration
 
-- The engine registers itself: `Partitia::Support.plugins << self` in its engine class. That is
-  how its migrations reach the app (`Partitia::Support.migrations_paths`, per scope) and its
-  views and components reach Tailwind (`Partitia::Support.source_paths`).
+- Every engine registers itself, whether or not it has tables or views today (Q6):
+  `Partitia::Support.plugins << self` in its engine class. That is how its migrations reach the
+  app (`Partitia::Support.migrations_paths`, per scope) and its views and components reach
+  Tailwind (`Partitia::Support.source_paths`).
+- **Exempt: dev** (Q1). It is console tooling, loaded only by `rails console`: no registration,
+  config, install generator, tenancy or services (§3–§6, §9). Engines still add their console
+  helpers to it (`Partitia::Dev.console`, behind `defined?(Partitia::Dev)`); the earlier apps
+  were driven mostly from the console, so helpers like switching tenant are worth the most.
 
 ### 4. Configuration
 
@@ -66,7 +73,8 @@ An engine meets every rule, or the exception is written here with its reason.
 - Secrets only from credentials or ENV. A development fallback is allowed only when it is
   labelled not-a-secret and production refuses it.
 - Endpoints default to the pcm service a developer runs (`stack/telemetry`, `stack/authentik`,
-  `stack/glitchtip`), so a generated app works against `pcm up` with no edits.
+  `stack/glitchtip`), so a generated app works against `pcm up` with no edits. No endpoint, DSN
+  or client secret is written into the app as a literal.
 - Callables the host must provide (resolvers, guards) are module-level slots that **fail loudly
   or deny** when unset, never silently allow.
 
@@ -77,8 +85,15 @@ An engine meets every rule, or the exception is written here with its reason.
 - **Never overwrites a host file wholesale** (`force: true`); it injects into it, or stops and
   says what to change.
 - Migrations reach the app through the registry (`migrations_paths` in `database.yml`), not by
-  copying.
-- It ends by printing what the host still has to do, if anything.
+  copying (Q3). The generator wires **every environment** (development, test, production), and
+  every plane the engine has (a global plane is registered by the engine, never by a line in
+  the app).
+- What a request carries that is secret (OAuth `code` and `state`, tokens) is added to
+  `filter_parameter_logging`.
+- It ends by printing what the host still has to do, if anything, and the entry points it
+  added (paths such as `/auth/login`).
+- Migrations are edited in place only before the first release; after it, a change is a new
+  migration.
 
 ### 6. Tenancy
 
@@ -92,14 +107,20 @@ An engine meets every rule, or the exception is written here with its reason.
 - Models and controllers log and instrument through `Partitia::Support::Logging` and
   `Instrumentable` (the support railtie injects them). Events are
   `partitia_<name>.<class>.<verb>`.
-- No payload key is in `Partitia::Support::RedactionConfig.sensitive_fields`.
+- No payload key is in `Partitia::Support::RedactionConfig.sensitive_fields`, and the bridge to
+  spans drops any that is (telemetry depends on support for this, Q2).
+- telemetry owns the app's observability settings in one config class: service name, OTLP
+  endpoint and the error tracker's DSN (GlitchTip, through `sentry-rails`), each defaulting to the
+  pcm service. Installing it without its generator must not be a silent no-op.
 - Spans and dashboards are named for the code, not the app (ADR 0007): the app is
   `service.name`.
 
 ### 8. Views
 
 - Phlex classes that use RubyUI components; no ERB. The engine lists the RubyUI components it
-  uses, and its installer adds them to the app.
+  uses, and its installer adds them to the app. The app's Phlex/RubyUI setup (namespaces,
+  `Components::Base`, design tokens) comes from the app template (D5), modelled on the earlier
+  `fudge` app.
 - Engine controllers inherit the host's `ApplicationController` unless isolation is the point
   (cognito's broker), which is then stated.
 
@@ -122,13 +143,13 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 
 | Engine | Gaps |
 |---|---|
-| support | Install generator only finds the sqlite development line in `database.yml` and says nothing when it can't (§5). It is a railtie, not an engine, so §3, §6 and §8 don't apply |
-| dev | Console-only railtie: no generator, no config, no registration. Proposed exempt (see Q1). No specs |
-| telemetry | No dependency on support, so its span bridge can't check `RedactionConfig` (§2, §7). No config class: the generator writes an initializer reading `OTEL_*` (§4). Generator re-run relies on Thor's conflict prompt (§5). No `partitia.services` (§9) |
+| support | Install generator only finds the sqlite development line in `database.yml` and says nothing when it can't, and wires development only (§5). It is a railtie, not an engine, so §3, §6 and §8 don't apply |
+| dev | Exempt from §3–§6 and §9 (Q1). No specs |
+| telemetry | No dependency on support, so its span bridge can't check `RedactionConfig` (§2, §7). No config class: the generator writes an initializer reading `OTEL_*`, and nothing covers the error tracker (§4, §7). Generator re-run relies on Thor's conflict prompt (§5). Not registered (§3). No `partitia.services` (§9) |
 | tenanted | Not isolated (by design: `tenants` routes drawn into the host). Install writes `database.yml` with `force: true` (§5); writes controllers and an initializer unguarded (§5). Views are ERB (§8). No config class: module accessors only (§4). `views` generator offers `accounts`, which the gem doesn't have, and rejects `tenant_not_found`, which its own template tells you to run |
 | iam | Install writes only a commented initializer; its credentials key says `iam:` instead of `partitia_iam:` (§4). Layout is ERB (§8). `lockbox` declared but unused (§2) |
-| cognito | Not registered (§3). Install writes the initializer unguarded (§5). The dummy's Authentik harness is its own docker compose (Authentik 2024.10.5) instead of pcm's `stack/authentik` (§4, §9). No `partitia.services` |
-| ui | Shelved. Not registered, so its components never reach Tailwind (§3). Defines top-level `Views`, `Components`, `RubyUI` and points the host's autoloader at them (§1; see Q4). No install generator |
+| cognito | Not registered (§3). Install writes the initializer unguarded, doesn't filter `code`/`state` from logs and doesn't print the login path (§5). The dummy's Authentik harness is its own docker compose (Authentik 2024.10.5) instead of pcm's `stack/authentik` (§4, §9). No `partitia.services` |
+| ui | Shelved. Not registered, so its components never reach Tailwind (§3). Its top-level `Views`, `Components`, `RubyUI` are the allowed exception (Q4). No install generator |
 
 ## Wiring an app today
 
@@ -147,23 +168,29 @@ tenant controllers); then iam and cognito as above; then an initializer like
 `/auth/callback` runs in the tenant's database, `identity_resolver`, `policy_resolver`,
 `platform_console_guard`); `provision_platform!`, then a `Tenant` per tenant.
 
-## Questions for review
+## Decisions (2026-10-22)
 
-- **Q1 — dev.** It is console tooling, loaded only in `rails console`. Exempt it from §3–§6 and
-  §9 (it registers nothing, configures nothing, installs by being in the Gemfile)?
-- **Q2 — telemetry → support.** Make support a dependency of telemetry so the span bridge drops
-  sensitive keys (§7), and give telemetry a config class for its endpoint and prefixes (§4)?
-- **Q3 — migrations.** The registry (`migrations_paths` in `database.yml`, nothing copied) or
-  Rails' usual `railties:install:migrations` copy? The code supports both; the contract should
-  pick one. Proposed: the registry, so an engine's schema changes reach every app without a
-  copy step.
-- **Q4 — ui's top-level modules.** Phlex and RubyUI expect `Views`, `Components` and `RubyUI` at
-  the top level of the app. Allow that as the one exception to §1, or wrap them?
-- **Q5 — tenanted's routes.** It draws `resources :tenants` into the host instead of being
-  mounted. Keep (tenancy is the app's routing, not a feature at a path), or mount it like the
-  others?
-- **Q6 — registration for every engine.** cognito has no tables or views today. Register it
-  anyway, so every engine is found the same way?
-- **Q7 — authorization.** ADR 0001 planned one Pundit entry point with a fail-closed
-  `verify_authorized`; it was never built, and the tenanted dummy uses Pundit directly. Part of
-  iam's contract now, or a later destination?
+The review answered these, checked against the four apps built on the earlier gems (`single`,
+`multi`, `factory`, `fudge`).
+
+- **Q1 — dev is exempt** from registration, config, install, tenancy and services. The apps were
+  driven mostly from the console (single's log: a dozen web-console sessions; multi's only
+  activity: console loads of `Tenant`), so engines keep adding console helpers to it.
+- **Q2 — telemetry depends on support** and owns the app's observability settings: service
+  name, OTLP endpoint, error-tracker DSN. In the apps the OpenTelemetry endpoint came from raw
+  `OTEL_*` variables, the GlitchTip DSN was a literal in an initializer, and multi had the gems
+  with no initializer, so it silently exported nothing.
+- **Q3 — migrations through the registry.** Every app pointed `database.yml` at the engines'
+  migration folders and none copied one; engine migrations ran straight from the gems. The gaps
+  were that only development was wired, and multi registered the global plane by hand, pointing
+  at a folder it did not have.
+- **Q4 — `Views`, `Components`, `RubyUI` may be top-level.** fudge, the UI experiment, shows the
+  setup that needs them.
+- **Q5 — tenanted keeps drawing its routes into the app.** No app exercised it; the multi demo
+  (D6) is the test.
+- **Q6 — every engine registers**, cognito included.
+- **Q7 — authorization (Pundit) is later**, when the demo needs it. No app used it.
+
+Also from the apps, now rules above: the OAuth `code` and `state` were in single's log (§5,
+filtering); single's log shows guesses at the login path before `/auth/login` (§5, print entry
+points); single pinned the URN partition to the old `cnfs` placeholder (ADR 0007).
