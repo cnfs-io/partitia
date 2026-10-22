@@ -52,7 +52,22 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] gem-local: add this repo, `gem-local build`; every gem loads from anywhere
 - [x] Specs green against the baseline
 - [x] URN partition is the app's, default `partitia`; strict `find_by_urn` (ADR 0007)
-- [ ] CI: an RSpec job alongside lint, on the same per-gem matrix (CI runs RuboCop only today)
+- [x] CI: an RSpec job alongside lint, on the same per-gem matrix; both green on Ruby 4.0.7
+      (checked in a `ruby:4.0.7` Linux container from a fresh clone, lockfiles frozen)
+
+**What an agent needs to know (D1):**
+- Each gem bundles and runs alone: `cd <gem> && bundle exec rspec`; siblings come from Gemfile
+  `path: "../<dir>"` entries, and from anywhere else through gem-local.
+- A fresh checkout has no test databases. Rails dummies load their schema through
+  `ActiveRecord::Migration.maintain_test_schema!` in `spec/rails_helper.rb`; a new engine needs
+  the same line.
+- Lockfiles carry `arm64-darwin`, `x86_64-linux-gnu` and `aarch64-linux-gnu`; a new gem's
+  lockfile needs `bundle lock --add-platform x86_64-linux-gnu aarch64-linux-gnu` or CI cannot
+  install its native gems.
+- A gemspec without `required_ruby_version` makes RuboCop parse it as Ruby 2.7 and report
+  `Lint/Syntax` on modern code.
+- CI's Ruby is `RUBY_VERSION` at the top of `.github/workflows/ci.yml`; keep it the Ruby the specs
+  were run on.
 
 ## D2 — The engine contract
 
