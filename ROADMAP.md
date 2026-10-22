@@ -79,11 +79,6 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] Drafted from the code: `ARCHITECTURE.md` (layers, contract §1–§10, each engine's gaps,
       today's wiring, questions Q1–Q7); repo `AGENTS.md`; support's `CLAUDE.md` is its `AGENTS.md`
 - [ ] Reviewed together; Q1–Q7 answered; status from Draft to Agreed
-- [ ] (was) `ARCHITECTURE.md`: the layers (base: support, dev, telemetry; identity: tenanted, iam,
-      cognito; presentation: ui), the dependency rules, and what every engine provides: an
-      idempotent `partitia:<name>:install` generator, config through `Partitia::Support::Config`
-      with pcm defaults, registration with the plugin registry, single- and multi-tenant
-      operation, no hard dependency on an optional sibling
 
 ## D3 — Each engine meets the contract on its own
 
