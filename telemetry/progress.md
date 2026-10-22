@@ -168,3 +168,19 @@ points at the external stack + Grafana on `http://localhost:8080`.
 description, and README ("Installing", "Seeing spans end to end") now describe the
 external stack (`podman compose up`, Grafana `:8080`) instead of an ejected one.
 The service-side README lives with the stack at `chorus/services/telemetry`.
+
+---
+
+## D3 — engine contract (ARCHITECTURE §2, §4, §5, §7, §9, Q2)
+
+- Depends on partitia-support (gemspec + Gemfile path). Still Rails-free at load.
+- Span bridge drops any payload key in `RedactionConfig.sensitive_fields`.
+- `Partitia::Telemetry::Config` (`partitia_telemetry`): `service_name`,
+  `otlp_endpoint` (`http://localhost:4318`), `error_dsn`, `prefixes`. OTEL_* wins
+  for the SDK (`sdk_service_name` / `sdk_traces_endpoint` return nil).
+- Generator idempotent: adds only missing gems (now also `sentry-rails`), skips
+  existing initializers; writes `sentry.rb` (on only with `error_dsn`); OTel
+  initializer reads the config, no literals. Prints the remaining steps.
+- Boot warns once when the SDK isn't configured.
+- `partitia.services = "telemetry glitchtip"`.
+- Specs 14 → 35; rubocop clean.

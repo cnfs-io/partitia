@@ -2,15 +2,19 @@
 
 # OpenTelemetry SDK configuration — owned by this app, safe to edit.
 #
-# partitia-telemetry itself depends on the OTel *API* only and stays a no-op until
-# this file installs and configures the *SDK*. Everything below is host policy:
-# the service name, which exporter, and where traces are sent. The gem's job is
-# only to turn partitia-prefixed ActiveSupport::Notifications into spans; this file
-# decides what happens to those spans.
+# partitia-telemetry depends on the OTel *API* only; this file installs the
+# *SDK*, which turns the partitia_* notification -> span bridge into exported
+# spans. Settings come from Partitia::Telemetry::Config:
 #
-# Local target: an external telemetry stack (e.g. chorus/services/telemetry, run
-# with `podman compose up`). The collector listens on localhost:4318 (OTLP/HTTP);
-# Grafana is at http://localhost:8080.
+#   config/partitia_telemetry.yml -> credentials.partitia_telemetry -> PARTITIA_TELEMETRY_*
+#
+#   service_name   default: the app's module name, underscored
+#   otlp_endpoint  default: http://localhost:4318 (pcm's stack/telemetry collector)
+#
+# The standard OTEL_* variables still win (OTel's convention): with
+# OTEL_SERVICE_NAME set the SDK names the service, and with
+# OTEL_EXPORTER_OTLP_(TRACES_)ENDPOINT or OTEL_TRACES_EXPORTER set it builds the
+# exporter itself. OTEL_SDK_DISABLED=true turns the SDK off.
 
 require "opentelemetry/sdk"
 require "opentelemetry/exporter/otlp"
@@ -20,12 +24,20 @@ require "opentelemetry/exporter/otlp"
 # metapackage OR hand-picked gems, never both.
 # require "opentelemetry/instrumentation/all"
 
-OpenTelemetry::SDK.configure do |c|
-  c.service_name = ENV.fetch("OTEL_SERVICE_NAME", "<%= app_name %>")
+telemetry = Partitia::Telemetry::Config
 
-  # The OTLP exporter defaults to http://localhost:4318 and honours the standard
-  # OTEL_EXPORTER_OTLP_ENDPOINT env var, so a running telemetry stack works with
-  # no extra config. Set that env var to point at a different collector.
+OpenTelemetry::SDK.configure do |c|
+  if (service_name = telemetry.sdk_service_name)
+    c.service_name = service_name
+  end
+
+  if (endpoint = telemetry.sdk_traces_endpoint)
+    c.add_span_processor(
+      OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
+        OpenTelemetry::Exporter::OTLP::Exporter.new(endpoint: endpoint)
+      )
+    )
+  end
 
   # Enable host framework auto-instrumentation (needs the gems required above):
   # c.use_all

@@ -12,6 +12,13 @@ module Partitia
         Partitia::Telemetry.install! unless Partitia::Telemetry.installed?
       end
 
+      # Installed without its generator, the bridge would export nothing and say
+      # nothing (ARCHITECTURE §7). After every initializer has run (so the app's
+      # opentelemetry.rb had its chance), log one line if the SDK is still absent.
+      config.after_initialize do
+        Partitia::Telemetry.warn_if_sdk_unconfigured!
+      end
+
       # Contribute the `debug!` console command to partitia-dev when present. Rails runs
       # `console` blocks only when a console session starts (rails console / bin/rails
       # c), never in web/job processes — and late enough that partitia-dev is loaded. Same

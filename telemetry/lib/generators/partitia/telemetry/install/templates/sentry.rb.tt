@@ -1,0 +1,20 @@
+# frozen_string_literal: true
+
+# Error tracking (GlitchTip, through the Sentry SDK) — owned by this app, safe
+# to edit.
+#
+# Off until Partitia::Telemetry::Config.error_dsn is set. The DSN is a secret:
+# put it in credentials (partitia_telemetry.error_dsn) or PARTITIA_TELEMETRY_ERROR_DSN,
+# never in this file. Get it from GlitchTip's project settings (Client Keys);
+# run GlitchTip locally with `pcm up glitchtip`.
+#
+# Traces go to OpenTelemetry (opentelemetry.rb), not to Sentry.
+
+if Partitia::Telemetry::Config.error_reporting?
+  Sentry.init do |config|
+    config.dsn = Partitia::Telemetry::Config.error_dsn
+    config.environment = Rails.env
+    config.breadcrumbs_logger = %i[active_support_logger http_logger]
+    config.send_default_pii = false
+  end
+end

@@ -18,6 +18,10 @@ Gem::Specification.new do |spec|
   # to allow pushing to a single host or delete this section to allow pushing to any host.
   spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
 
+  # The pcm services this gem talks to (ARCHITECTURE §9): the OTLP collector and
+  # the error tracker. Space-separated pcm service names, read by `pt services`.
+  spec.metadata["partitia.services"] = "telemetry glitchtip"
+
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "TODO: Put your gem's public repo URL here."
   spec.metadata["changelog_uri"] = "TODO: Put your gem's CHANGELOG.md URL here."
@@ -38,6 +42,11 @@ Gem::Specification.new do |spec|
   # This is the one heavier dep, but it is the whole point of the bridge and is
   # always present in a Rails host. Pinned to the Rails line the family targets.
   spec.add_dependency "activesupport", ">= 8.1.3"
+
+  # Config base class (Partitia::Telemetry::Config) and the family-wide
+  # redaction list the span bridge honours (ARCHITECTURE §7, Q2). Rails-free, so
+  # this gem stays usable without Rails loaded.
+  spec.add_dependency "partitia-support"
 
   spec.add_development_dependency "rails", ">= 8.1.3"
 end

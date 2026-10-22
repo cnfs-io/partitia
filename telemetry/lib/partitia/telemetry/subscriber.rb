@@ -1,4 +1,5 @@
 require "opentelemetry"
+require "partitia/support/redaction_config"
 
 module Partitia
   module Telemetry
@@ -20,7 +21,9 @@ module Partitia
     #                 Partitia::Support::Logging's component tag
     # - attributes  = each payload entry, flattened to "<prefix>.<key>" with a
     #                 primitive value; `:exception`/`:exception_object` are handled
-    #                 specially (they mark the span errored, not as attributes)
+    #                 specially (they mark the span errored, not as attributes), and
+    #                 any key in Partitia::Support::RedactionConfig.sensitive_fields
+    #                 is dropped, never attached (ARCHITECTURE §7)
     class Subscriber
       # Payload keys ActiveSupport (or the emitter) uses for error signalling;
       # never emitted as plain attributes.
@@ -82,15 +85,18 @@ module Partitia
         OpenTelemetry.tracer_provider.tracer(component)
       end
 
-      # Fold the notification payload onto the span: errors mark status, everything
-      # else becomes a namespaced attribute when it is a value OTel accepts.
+      # Fold the notification payload onto the span: errors mark status, sensitive
+      # keys are dropped, everything else becomes a namespaced attribute when it is
+      # a value OTel accepts.
       def apply_payload(span, name, payload)
         prefix = name.to_s
+        sensitive = Partitia::Support::RedactionConfig.sensitive_fields
         payload.each do |key, value|
           if ERROR_KEYS.include?(key)
             record_error(span, value)
             next
           end
+          next if sensitive.include?(key.to_s.to_sym)
 
           attr_value = coerce(value)
           next if attr_value.nil?

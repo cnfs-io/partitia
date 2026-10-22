@@ -34,6 +34,25 @@ RSpec.describe Partitia::Telemetry::Subscriber do
       expect(span.attributes["partitia_okf.bundle.create.path"]).to eq("/x")
     end
 
+    it "drops payload keys listed in RedactionConfig.sensitive_fields" do
+      ActiveSupport::Notifications.instrument(
+        "partitia_iam.session.open", principal_id: "p-1", email: "a@b.c", "access_token" => "t", tenant: "acme"
+      ) { }
+
+      span = OtelCapture.captured_spans.find { |s| s.name == "partitia_iam.session.open" }
+      expect(span.attributes.keys).to eq([ "partitia_iam.session.open.tenant" ])
+    end
+
+    it "drops a host's additional sensitive fields too" do
+      with_env("PARTITIA_REDACTION_ADDITIONAL_FIELDS" => "ssn") do
+        ActiveSupport::Notifications.instrument("partitia_okf.bundle.create", ssn: "123", bundle_id: 1) { }
+      end
+
+      span = OtelCapture.captured_spans.find { |s| s.name == "partitia_okf.bundle.create" }
+      expect(span.attributes).not_to have_key("partitia_okf.bundle.create.ssn")
+      expect(span.attributes["partitia_okf.bundle.create.bundle_id"]).to eq(1)
+    end
+
     it "names the tracer after the event's first segment (the underscored module)" do
       ActiveSupport::Notifications.instrument("partitia_okf.bundle.create") { }
 
