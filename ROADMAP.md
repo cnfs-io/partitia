@@ -41,6 +41,11 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [ ] `engine check` — an engine against the contract (D2)
 - [ ] `services` — the pcm services the app's engines declare, up/down
 - [ ] `smoke` — the D6 acceptance as a command
+- [ ] `ci [gem...]` — what CI runs, in a throwaway Linux container: Ruby and gems read from
+      `.github/workflows/ci.yml`, fresh clone, frozen bundle, rspec, rubocop; a GEM STATUS SPECS
+      LINT table, non-zero on failure. Bundler goes through gemstash when it is up. **Waiting on
+      `pcm run`** (one-off jobs, like `pmm run`), which the anfs agent is building; it messages
+      this session when it is ready
 
 ## D1 — Ground truth
 
