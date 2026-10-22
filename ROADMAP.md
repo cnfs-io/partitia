@@ -114,6 +114,27 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [ ] errors: `sentry-rails` to `stack/glitchtip`
 - [ ] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
       wizard)
+- [ ] `pt services`: provisions each installed engine's services through pcm's public commands
+      only (`pcm provision`/`deprovision`, requested as anfs r-20261022-2); results go to the
+      app's local env, never committed
+
+How it is built:
+
+- The containers change in stack (pcm-containers skill), modelled on `postgres/provision`:
+  authentik gets bootstrap admin/token settings, a blueprints mount, and `provision`/
+  `deprovision` hooks that apply an idempotent per-app blueprint and print `ISSUER`, `CLIENT_ID`;
+  glitchtip gets hooks that create the org and project and print `DSN`
+- Hooks run only through pcm. Before `pcm provision` lands, test them through a scratch local
+  pcm definition that lists the service in `x-pcm.depends_on`, never by running the script
+- OIDC client type is a setting: `client_type=public|confidential` in the authentik hook and
+  in cognito's config. Only `public` (PKCE, no secret) is implemented; `confidential` is
+  rejected with "not yet supported", leaving room for the secret to flow through `pt services`
+  into credentials later
+
+Later (longer term):
+
+- [ ] Confidential OIDC clients: the hook generates and prints `CLIENT_SECRET`, `pt services`
+      stores it in the app's credentials, cognito sends it at the token endpoint
 
 ## D5 — Template shakedown
 
