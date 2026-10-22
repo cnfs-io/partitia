@@ -1,0 +1,25 @@
+<%# ⚠️  DEV/TEST SCAFFOLD — written by `rails g chatter:install:dev`. %>
+<%# The switcher bar: click a name to "become" that participant (fake auth). Open %>
+<%# two browser tabs (or one normal + one incognito), become different people in %>
+<%# each, and watch a message sent in one appear in the other in real time — that %>
+<%# is chatter's Turbo Streams delivery. Safe to delete when done. %>
+<nav class="bg-slate-800 text-slate-100 px-4 py-2 flex items-center gap-3 flex-wrap text-sm">
+  <span class="font-semibold text-slate-300">Acting as:</span>
+  <% if current_participant %>
+    <span class="px-2 py-1 rounded bg-emerald-600 font-medium">
+      <%= current_participant.chatter_display_name %>
+    </span>
+  <% else %>
+    <span class="px-2 py-1 rounded bg-rose-600 font-medium">nobody</span>
+  <% end %>
+
+  <span class="ml-auto text-slate-400">Become:</span>
+  <% (Person.all + Agent.all).each do |participant| %>
+    <%= button_to participant.chatter_display_name,
+          main_app.session_path,
+          params: { gid: participant.to_gid.to_s },
+          class: "px-2 py-1 rounded bg-slate-600 hover:bg-slate-500 #{'ring-2 ring-emerald-400' if participant == current_participant}" %>
+  <% end %>
+
+  <%= link_to "Chats", chatter.root_path, class: "px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500" %>
+</nav>

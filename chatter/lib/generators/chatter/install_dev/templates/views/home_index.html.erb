@@ -1,0 +1,23 @@
+<%# ⚠️  DEV/TEST SCAFFOLD — written by `rails g chatter:install:dev`. %>
+<%# Landing page: pick an identity from the switcher above, then enter chats. %>
+<div class="p-6 space-y-4">
+  <h1 class="text-2xl font-bold">chatter test harness</h1>
+
+  <% if current_participant %>
+    <p class="text-slate-700">
+      You are acting as
+      <span class="font-semibold"><%= current_participant.chatter_display_name %></span>.
+    </p>
+    <%= link_to "Go to chats →", chatter.root_path,
+          class: "inline-block px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-500" %>
+  <% else %>
+    <p class="text-slate-700">
+      Pick an identity from the switcher bar above, then enter the chats.
+    </p>
+  <% end %>
+
+  <p class="text-sm text-slate-500">
+    Tip: open a second tab (or an incognito window), become a
+    <em>different</em> participant there, and watch messages appear in real time.
+  </p>
+</div>

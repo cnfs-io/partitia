@@ -1,0 +1,74 @@
+<div class="space-y-8">
+  <header>
+    <h1 class="text-2xl font-bold">Chats</h1>
+    <p class="text-slate-500 text-sm">
+      Acting as <span class="font-medium"><%= current_participant.chatter_display_name %></span>
+    </p>
+  </header>
+
+  <section class="grid gap-8 md:grid-cols-2">
+    <div>
+      <h2 class="text-lg font-semibold mb-2">Direct messages</h2>
+      <ul class="space-y-1">
+        <% @direct_conversations.each do |conversation| %>
+          <li>
+            <%= link_to conversation.display_title(current_participant),
+                  conversation,
+                  class: "block px-3 py-2 rounded bg-white border hover:bg-slate-50" %>
+          </li>
+        <% end %>
+        <% if @direct_conversations.empty? %>
+          <li class="text-slate-400 text-sm">No direct messages yet.</li>
+        <% end %>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="text-lg font-semibold mb-2">Groups</h2>
+      <ul class="space-y-1">
+        <% @group_conversations.each do |conversation| %>
+          <li>
+            <%= link_to conversation.display_title(current_participant),
+                  conversation,
+                  class: "block px-3 py-2 rounded bg-white border hover:bg-slate-50" %>
+          </li>
+        <% end %>
+        <% if @group_conversations.empty? %>
+          <li class="text-slate-400 text-sm">No groups yet.</li>
+        <% end %>
+      </ul>
+    </div>
+  </section>
+
+  <section class="grid gap-8 md:grid-cols-2">
+    <div class="p-4 rounded border bg-white">
+      <h2 class="text-lg font-semibold mb-2">Start a direct message</h2>
+      <%= form_with url: conversations_path, method: :post, class: "flex gap-2" do |f| %>
+        <%= f.hidden_field :kind, value: "direct" %>
+        <%= f.select :participant_gid,
+              @participants.map { |p| [ p.chatter_display_name, p.to_gid.to_s ] },
+              { prompt: "Choose someone" },
+              class: "flex-1 border rounded px-2 py-1" %>
+        <%= f.submit "Start", class: "px-3 py-1 rounded bg-indigo-600 text-white" %>
+      <% end %>
+    </div>
+
+    <div class="p-4 rounded border bg-white">
+      <h2 class="text-lg font-semibold mb-2">Start a group</h2>
+      <%= form_with url: conversations_path, method: :post, class: "space-y-2" do |f| %>
+        <%= f.hidden_field :kind, value: "group" %>
+        <%= f.text_field :name, placeholder: "Group name",
+              class: "w-full border rounded px-2 py-1" %>
+        <fieldset class="space-y-1">
+          <% @participants.each do |p| %>
+            <label class="flex items-center gap-2 text-sm">
+              <%= check_box_tag "member_gids[]", p.to_gid.to_s, false %>
+              <%= p.chatter_display_name %>
+            </label>
+          <% end %>
+        </fieldset>
+        <%= f.submit "Create group", class: "px-3 py-1 rounded bg-indigo-600 text-white" %>
+      <% end %>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,24 @@
+<div class="space-y-4">
+  <header class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold"><%= @conversation.display_title(current_participant) %></h1>
+      <p class="text-slate-500 text-sm">
+        <%= @conversation.group? ? "Group" : "Direct message" %> ·
+        <%= pluralize(@conversation.memberships.size, "participant") %>
+      </p>
+    </div>
+    <%= link_to "← All chats", conversations_path, class: "text-indigo-600 text-sm" %>
+  </header>
+
+  <%# Subscribe to the conversation record's stream — must match the streamable in
+      Chatter::Message's broadcasts_to. The DOM target below matches its `target:`. %>
+  <%= turbo_stream_from @conversation %>
+
+  <div id="conversation_<%= @conversation.id %>_messages"
+       data-controller="chatter--messages"
+       class="h-96 overflow-y-auto space-y-2 p-4 rounded border bg-white">
+    <%= render @messages %>
+  </div>
+
+  <%= render "chatter/messages/form", conversation: @conversation, message: @message %>
+</div>
