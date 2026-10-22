@@ -259,3 +259,21 @@ data**.
    `config/partitia_cognito.yml` still holds a **plaintext client_secret** (a
    config/secrets issue, not telemetry — belongs to the Plan 006 rotation TODO
    above, but re-confirmed present).
+
+---
+
+## D3 — Engine contract (2026-10-22)
+
+- Registered: `Partitia::Support.plugins << self` in the engine (§3, Q6).
+- `partitia.services = "authentik"` in the gemspec (§9).
+- Install generator: initializer and `config/partitia_cognito.yml` guarded (skip if
+  present); yml points development at pcm's Authentik
+  (`http://localhost:9000/application/o/<app-slug>/`, client_id `<app-slug>`), test
+  has stubs, production reads ENV/credentials, no `client_secret` anywhere; `:code`,
+  `:state` injected into `filter_parameter_logging.rb` (created if missing); prints
+  the entry points and what is left. Second run: all `skip`, no prompt.
+- Private Authentik harness removed (`spec/dummy/docker/authentik`, `bin/authentik`,
+  the Procfile line): pcm's `stack/authentik` (`pcm up authentik`) replaces it. The
+  live discovery spec is no longer tag-excluded; it skips unless `AUTHENTIK_ISSUER`
+  is set and answers.
+- Specs: 51 → 63 examples (+10 generator, +2 engine), 1 pending (the live spec).

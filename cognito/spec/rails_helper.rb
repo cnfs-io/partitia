@@ -14,10 +14,6 @@ RSpec.configure do |config|
   config.infer_spec_type_from_file_location!
   config.filter_rails_from_backtrace!
 
-  # The one live-container spec is opt-in only; the default suite passes with
-  # Docker stopped (Plan 003 WS5). Run it with `--tag authentik`.
-  config.filter_run_excluding :authentik
-
   # The broker's configuration + provider registry are process-level singletons;
   # reset them between examples so nothing leaks (order is randomized).
   config.before do

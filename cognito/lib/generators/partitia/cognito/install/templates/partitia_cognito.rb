@@ -14,10 +14,11 @@
 # Register the Authentik (OIDC) provider and make it active. Its connection
 # values come from Partitia::Cognito::Config — set them where they belong:
 #
-#   * issuer / client_id — non-secret. Put them in config/partitia_cognito.yml, or
-#     override with PARTITIA_COGNITO_ISSUER / PARTITIA_COGNITO_CLIENT_ID. Authentik's
-#     OIDC issuer is per-application:
-#         https://<authentik-host>/application/o/<app-slug>/
+#   * issuer / client_id — non-secret. In config/partitia_cognito.yml (the
+#     installer wrote one pointing development at pcm's Authentik: `pcm up
+#     authentik`), or override with PARTITIA_COGNITO_ISSUER / PARTITIA_COGNITO_CLIENT_ID.
+#     Authentik's OIDC issuer is per-application:
+#         http://localhost:9000/application/o/<app-slug>/
 #   * client_secret — SECRET. Put it in Rails credentials (never inline it):
 #         bin/rails credentials:edit
 #         partitia_cognito:

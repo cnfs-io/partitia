@@ -1,8 +1,5 @@
 # Dev processes for the partitia-cognito dummy. Start with: foreman start -f Procfile.dev
 #
-# The broker itself is a lean web process. The Authentik IdP is OPT-IN — a
-# developer not working on auth just runs `web` and never needs Docker. To bring
-# up the local IdP, uncomment the `authentik` line (needs Docker + a filled-in
-# spec/dummy/docker/authentik/.env). See bin/authentik.
+# The IdP is pcm's Authentik, run outside this Procfile: `pcm up authentik`
+# (http://localhost:9000, `pcm show authentik`).
 web: bin/rails server -p 3000
-# authentik: ../../bin/authentik up

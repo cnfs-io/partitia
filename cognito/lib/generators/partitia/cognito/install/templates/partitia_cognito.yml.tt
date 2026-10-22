@@ -1,0 +1,37 @@
+# partitia-cognito connection config (Partitia::Cognito::Config).
+#
+# Each value resolves from this file, then credentials.partitia_cognito, then
+# ENV["PARTITIA_COGNITO_*"] (ENV wins). Non-secret values only:
+# client_secret NEVER goes here. Put it in credentials
+#   bin/rails credentials:edit   ->   partitia_cognito: { client_secret: <value> }
+# or in PARTITIA_COGNITO_CLIENT_SECRET.
+#
+# development points at pcm's Authentik (`pcm up authentik`, port 9000). The
+# issuer is per Authentik application: <authentik>/application/o/<app-slug>/.
+# The redirect URI to register there is <host><%= options[:mount_path] %>/callback.
+
+development:
+  issuer: <%= issuer %>
+  # The Authentik provider's Client ID. Set it there to "<%= app_slug %>", or paste yours here.
+  client_id: <%= app_slug %>
+  scopes:
+    - openid
+    - email
+    - profile
+
+# Stub values: specs stub the IdP over HTTP (WebMock); nothing is contacted.
+test:
+  issuer: http://authentik.test/application/o/<%= app_slug %>/
+  client_id: test-client-id
+  scopes:
+    - openid
+    - email
+    - profile
+
+# production: set PARTITIA_COGNITO_ISSUER and PARTITIA_COGNITO_CLIENT_ID (or
+# credentials.partitia_cognito.issuer / .client_id) for the real IdP.
+production:
+  scopes:
+    - openid
+    - email
+    - profile
