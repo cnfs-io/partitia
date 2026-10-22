@@ -42,6 +42,9 @@ module Partitia
         def point_for(env)
           env_index = key_index(env, 0, lines.size, 0)
           return manual(env, "no `#{env}:` block found") unless env_index
+          # Already reading the registry for some scope (partitia-tenanted's global and
+          # tenant planes, which have no primary): wired by whoever wrote it
+          return Point.new(env:, status: :present) if registry?(env_index + 1, block_end(env_index, 0))
 
           target = block_target(env, env_index)
           return target if target.is_a?(Point)
@@ -95,6 +98,10 @@ module Partitia
         # The first line after +index+ that is content at or left of +indent+.
         def block_end(index, indent)
           ((index + 1)...lines.size).find { |i| content?(lines[i]) && indent_of(lines[i]) <= indent } || lines.size
+        end
+
+        def registry?(start, stop)
+          (start...stop).any? { |i| content?(lines[i]) && lines[i].include?("Partitia::Support.migrations_paths[") }
         end
 
         def content?(line) = !line.strip.empty? && !line.lstrip.start_with?("#")

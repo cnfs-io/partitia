@@ -68,6 +68,21 @@ RSpec.describe Partitia::Support::Generators::DatabaseYml do
     expect(anchor_line(content, point)).to eq("    <<: *default\n")
   end
 
+  it "counts an environment that reads the registry for other scopes (tenanted's planes) as wired" do
+    content = <<~YAML
+      development:
+        global:
+          database: storage/development.sqlite3
+          migrations_paths: <%= Partitia::Support.migrations_paths[:global] %>
+        tenant:
+          database: storage/development/%{tenant}.sqlite3
+          migrations_paths: <%= Partitia::Support.migrations_paths[:tenant] %>
+          tenanted: true
+    YAML
+    point = described_class.new(content).points(%w[development]).first
+    expect(point.status).to eq(:present)
+  end
+
   it "accepts a url: in place of database:" do
     content = "production:\n  adapter: postgresql\n  url: <%= ENV['DATABASE_URL'] %>\n  pool: 5\n"
     point = described_class.new(content).points(%w[production]).first
