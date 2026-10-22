@@ -34,12 +34,14 @@ test:
     migrations_paths: <%= Partitia::Support.migrations_paths[:tenant] %>
     tenanted: true
 
-# SQLite3 write its data on the local filesystem, as such it requires
-# persistent disks. If you are deploying to a managed service, you should
-# make sure it provides disk persistence, as many don't.
-#
-# Similarly, if you deploy your application as a Docker container, you must
-# ensure the database is located in a persisted volume.
+# SQLite writes to the local filesystem: storage/ must be a persistent volume.
 production:
-  <<: *default
-  # database: path/to/persistent/storage/production.sqlite3
+  global:
+    <<: *default
+    database: storage/production.sqlite3
+    migrations_paths: <%= Partitia::Support.migrations_paths[:global] %>
+  tenant:
+    <<: *default
+    database: storage/production/%{tenant}.sqlite3
+    migrations_paths: <%= Partitia::Support.migrations_paths[:tenant] %>
+    tenanted: true

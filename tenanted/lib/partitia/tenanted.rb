@@ -11,7 +11,7 @@ require "partitia/tenanted/engine"
 #   * TenantResolution        — request -> tenant concern (delegates to Resolvers)
 #   * Resolvers               — subdomain / host-hash / header strategies
 #   * Tenant registry MVC     — provided by the engine, ejectable via generators
-#   * tenant migration status — rake task (db:migrate:status:tenant)
+#   * migration status       — rake task (partitia:tenanted:migrate:status)
 #   * console helpers         — contributed to partitia-dev when present
 #
 # It owns the GLOBAL plane and the reserved PLATFORM plane (ADR 0003): tenant

@@ -180,3 +180,26 @@ bundle exec rubocop      # clean
 # regression: iam's own suite stays green and single-tenant
 ( cd ../iam && bundle exec rspec )   # 78 examples, 0 failures
 ```
+
+---
+
+## D3 — Engine contract (2026-10-22)
+
+**`bundle exec rspec` → 98 examples, 0 failures (73 before); `bin/rubocop` clean.**
+Checked against a fresh `rails new` app as well as the dummy.
+
+- **Install generator (§5).** `database.yml` is written only when missing or still
+  the stock SQLite file (compared by structure; production's Solid databases are
+  kept); a file with the tenanted layout is left alone; anything else stops the
+  run (exit 1) before any file changes, printing the layout to adopt. Every
+  environment gets `global` + `tenant` planes reading migrations from the
+  registry. The injected `migrations_paths_for.replace` in `application.rb` is
+  gone (the engine registers the scopes); so is the stale `storage/tenants`
+  step. Controllers and the initializer are skipped when present. Ends with the
+  entry points and the remaining host steps.
+- **`views` generator.** `source_root`; resources `tenants`, `tenant_not_found`.
+- **`partitia:tenanted:migrate:status`** replaces `db:migrate:status:tenant` and
+  `:global`: global, platform and every tenant database, pending shown as
+  `down`, never raising `PendingMigrationError`; `ARTENANT=` for one.
+- **No Config class.** The one scalar, `config.partitia_tenanted.trace`, is an
+  observability switch read in an engine initializer; left for telemetry's config.

@@ -1,78 +1,69 @@
+require "erb"
+require "yaml"
 require "rails/generators/base"
 
 module Partitia
   module Tenanted
     module Generators
-      # Wires a host Rails app for partitia-tenanted multi-tenancy.
-      #
-      # This generator performs the host-app edits that an engine cannot do on its
-      # own — the database.yml rewrite, the ApplicationRecord/Controller wiring,
-      # and the thin host controllers.
-      #
-      # The gem PROVIDES the models, controllers, views, and concern. This
-      # generator WIRES the app to use them.
-      #
-      # MIGRATIONS — this generator copies nothing
-      #   The rewritten database.yml defaults each database to a conventional,
-      #   hardcoded migrations_paths (db/migrate, db/global_migrate) — the app
-      #   owns its migrations, pulled the standard Rails way:
-      #
-      #     bin/rails partitia_tenanted:install:migrations
-      #     bin/rails railties:install:migrations
-      #
-      #   The template also carries a commented-out in-place alternative per
-      #   database (reading straight from the gems via Partitia::Support.migrations_paths);
-      #   uncommenting that line is the whole switch. See the template's header.
+      # Wires a host Rails app for partitia-tenanted multi-tenancy:
       #
       #   bin/rails generate partitia:tenanted:install
       #
+      # The gem provides the models, controllers, views, routes (/tenants,
+      # /tenant-unknown) and the migration scopes (the engine registers the
+      # :tenant and :global planes with Partitia::Support). This generator does the
+      # host-app edits the engine cannot: database.yml, ApplicationRecord and
+      # ApplicationController, development subdomains, the thin host controllers
+      # and the initializer.
+      #
+      # Idempotent: every write is guarded, so a second run changes nothing and
+      # asks nothing. database.yml is written only when it is missing or is still
+      # the stock single-database file `rails new` produces; a customized file
+      # without the tenanted layout stops the generator, before anything is
+      # changed, with the layout to adopt.
       class InstallGenerator < Rails::Generators::Base
         source_root File.expand_path("templates", __dir__)
 
-        desc "Wire this app for partitia-tenanted multi-tenancy (database.yml, " \
-             "ApplicationRecord/Controller, host controllers, migrations, storage dir)."
+        desc "Wire this app for partitia-tenanted multi-tenancy (database.yml planes, " \
+             "ApplicationRecord/Controller, host controllers, initializer)."
 
-        # 1. Make ApplicationRecord the tenanted connection class. The argument is
-        #    the database.yml config name of the tenanted database ("tenant"); the
-        #    adapter defaults to "primary", which this stack renamed.
+        DATABASE_YML = "config/database.yml".freeze
+        ENVIRONMENTS = %w[development test production].freeze
+        SOLID_DATABASES = %w[cache queue cable].freeze
+
+        # A stop (customized database.yml) exits non-zero, so a script running
+        # the generator (pt new, an app template) sees it.
+        def self.exit_on_failure? = true
+
+        # 1. database.yml first, so a customized file stops the run before any
+        #    other file is touched.
+        def configure_database
+          case database_config_state
+          when :tenanted
+            say_status :skip, "#{DATABASE_YML} already has the global and tenant planes", :yellow
+          when :missing, :stock
+            template "database.yml", DATABASE_YML, force: true
+          else
+            say database_change_instructions, :red
+            raise Thor::Error, "#{DATABASE_YML} is customized; not changed. Apply the layout above and re-run."
+          end
+        end
+
+        # 2. Make ApplicationRecord the tenanted connection class. The argument is
+        #    the database.yml config name of the tenanted database ("tenant").
         def tenant_application_record
           path = "app/models/application_record.rb"
-          if File.read(path).match?(/^\s*tenanted\b/)
+          if read(path).match?(/^\s*tenanted\b/)
             say_status :skip, "ApplicationRecord already calls tenanted", :yellow
           else
             inject_into_file path, %(  tenanted "tenant"\n), after: /primary_abstract_class\n/
           end
         end
 
-        # 1b. Show the migration-scope-name knobs in config/application.rb. The
-        #     engine ships these defaults; a host renaming its databases edits the
-        #     values here (and keeps them in sync with the `tenanted "<name>"`
-        #     call above and the database.yml entry names). Injected as an explicit
-        #     override so the seam is visible, not buried in the gem.
-        def configure_migration_scopes
-          path = "config/application.rb"
-          if File.read(path).include?("Partitia::Support.migrations_paths_for")
-            say_status :skip, "application.rb already sets migration scopes", :yellow
-          else
-            inject_into_file path, <<~RUBY.indent(4), after: /class Application < Rails::Application\n/
-
-              # Migration scope names for partitia-tenanted. The engine ships these
-              # defaults (tenant -> db/migrate, global -> db/global_migrate).
-              # Rename the databases by editing the values here — keep these keys
-              # in sync with your database.yml entry names and the
-              # `tenanted "<name>"` call in app/models/application_record.rb.
-              Partitia::Support.migrations_paths_for.replace(
-                tenant: "db/migrate",
-                global: "db/global_migrate"
-              )
-            RUBY
-          end
-        end
-
-        # 2. Resolve the tenant from the subdomain in every request.
+        # 3. Resolve the tenant from the request in every controller.
         def include_tenant_resolution
           path = "app/controllers/application_controller.rb"
-          if File.read(path).include?("Partitia::Tenanted::TenantResolution")
+          if read(path).include?("Partitia::Tenanted::TenantResolution")
             say_status :skip, "ApplicationController already includes TenantResolution", :yellow
           else
             inject_into_file path,
@@ -81,19 +72,10 @@ module Partitia
           end
         end
 
-        # 3. Rewrite database.yml: tenanted `tenant` (one DB per tenant) + a plain
-        #    `global` DB for the registry. Defaults to conventional hardcoded
-        #    migrations_paths; the template carries a commented-out in-place
-        #    alternative per database.
-        def configure_database
-          say_status :info, "Rewriting config/database.yml for multi-tenancy", :green
-          template "database.yml", "config/database.yml", force: true
-        end
-
         # 4. Development: make *.localhost subdomains resolve (tld_length 0).
         def configure_development_subdomains
           path = "config/environments/development.rb"
-          if File.read(path).include?("tld_length")
+          if read(path).include?("tld_length")
             say_status :skip, "development.rb already sets tld_length", :yellow
           else
             inject_into_file path,
@@ -103,46 +85,165 @@ module Partitia
           end
         end
 
-        # 5. Thin host controllers inheriting from the engine's, so routes resolve
-        #    in the host namespace and the app can customize by overriding here.
+        # 5. Thin host controllers inheriting from the engine's, so the routes the
+        #    engine draws resolve in the host namespace and the app can override.
         def create_host_controllers
-          template "tenants_controller.rb", "app/controllers/tenants_controller.rb"
-          template "tenant_not_found_controller.rb", "app/controllers/tenant_not_found_controller.rb"
+          guarded_template "tenants_controller.rb", "app/controllers/tenants_controller.rb"
+          guarded_template "tenant_not_found_controller.rb", "app/controllers/tenant_not_found_controller.rb"
         end
 
-        # 5b. Initializer: tenant resolver + unknown-tenant handling.
+        # 6. Initializer: resolver, unknown-tenant handling, console guard.
         def create_initializer
-          template "partitia_tenanted.rb", "config/initializers/partitia_tenanted.rb"
+          guarded_template "partitia_tenanted.rb", "config/initializers/partitia_tenanted.rb"
         end
 
-        # 6. Per-tenant SQLite files live here.
-        def create_tenant_storage_dir
-          empty_directory "storage/tenants"
-          create_file "storage/tenants/.keep" unless File.exist?("storage/tenants/.keep")
-        end
-
-        # 7. Create + migrate the GLOBAL database so the Tenant registry table
-        #    exists. (Tenant databases are created/migrated on demand by
-        #    activerecord-tenanted when each Tenant is created.)
+        # 7. Create and migrate the GLOBAL database so the Tenant registry exists.
+        #    Tenant databases are created and migrated by activerecord-tenanted
+        #    when each Tenant is created.
         def migrate_global_database
-          say_status :info, "Migrating the global database (tenant registry)", :green
           rails_command "db:migrate"
         end
 
         def show_post_install_message
           say <<~MSG, :green
 
-            partitia-tenanted is installed. Next steps:
+            partitia-tenanted is installed.
 
-              1. Boot the server:           bin/rails server
-              2. Bare domain  http://localhost:3000        -> tenant registry (tenants#index)
-              3. Create a tenant in console:
+            Entry points (drawn into your routes by the engine):
+              /tenants          tenant registry, the platform console (denied until step 1)
+              /tenant-unknown   landing page for a subdomain with no tenant
+
+            Still to do:
+              1. Decide who may use the platform console: set
+                 Partitia::Tenanted.platform_console_guard in
+                 config/initializers/partitia_tenanted.rb. Unset, it answers 403.
+              2. Provision the reserved platform database, once per environment:
+                   bin/rails runner 'Partitia::Tenanted.provision_platform!(owner_email: "you@example.com")'
+              3. Create a tenant, then visit http://<subdomain>.localhost:3000
                    Partitia::Tenanted::Tenant.create!(name: "Acme", subdomain: "acme", owner_email: "owner@acme.test")
-              4. Visit         http://acme.localhost:3000   -> that tenant's app
 
-            The tenant's database is provisioned automatically on creation, and
-            the registered after_provision hooks seed its identity records.
+            Migration status of the global, platform and tenant databases:
+              bin/rails partitia:tenanted:migrate:status
           MSG
+        end
+
+        private
+
+        def read(path)
+          File.read(File.join(destination_root, path))
+        end
+
+        def guarded_template(source, path)
+          if File.exist?(File.join(destination_root, path))
+            say_status :skip, "#{path} already exists", :yellow
+          else
+            template source, path
+          end
+        end
+
+        # The template's production section repeats the stock file's Solid
+        # databases (cache, queue, cable), so an app keeps what `rails new` gave it.
+        def solid_databases
+          @solid_databases || []
+        end
+
+        # :missing, :tenanted (every environment has a global database and a
+        # tenanted one), :stock (still what `rails new` wrote for SQLite) or
+        # :custom (anything else: never rewritten).
+        def database_config_state
+          path = File.join(destination_root, DATABASE_YML)
+          return :missing unless File.exist?(path)
+
+          config = parse_database_yml(File.read(path))
+          return :custom unless config.is_a?(Hash)
+          return :tenanted if tenanted_layout?(config)
+          return :stock if stock_layout?(config)
+
+          :custom
+        end
+
+        # YAML with ERB tags replaced by a placeholder: the shape is all that
+        # matters here, and evaluating the host's ERB is not this generator's job.
+        def parse_database_yml(content)
+          yaml = content.gsub(/<%=.*?%>/m, "ERB").gsub(/<%.*?%>/m, "")
+          YAML.safe_load(yaml, aliases: true)
+        rescue Psych::Exception
+          nil
+        end
+
+        def tenanted_layout?(config)
+          ENVIRONMENTS.all? { |env| tenanted_environment?(config[env]) }
+        end
+
+        def tenanted_environment?(dbs)
+          dbs.is_a?(Hash) && dbs["global"].is_a?(Hash) &&
+            dbs.values.any? { |db| db.is_a?(Hash) && db["tenanted"] == true }
+        end
+
+        # Conservative: the SQLite file `rails new` writes (Rails 8, with or
+        # without Solid, with or without Kamal), compared by structure. Any extra
+        # key or changed value makes it custom.
+        def stock_layout?(config)
+          return false unless config.keys.sort == (ENVIRONMENTS + [ "default" ]).sort
+
+          base = config["default"]
+          return false unless stock_default?(base)
+          return false unless config["development"] == base.merge("database" => "storage/development.sqlite3")
+          return false unless config["test"] == base.merge("database" => "storage/test.sqlite3")
+
+          stock_production?(config["production"], base)
+        end
+
+        def stock_default?(base)
+          pool_key = (base.keys & %w[max_connections pool]).first
+          pool_key && base == { "adapter" => "sqlite3", pool_key => "ERB", "timeout" => 5000 }
+        end
+
+        def stock_production?(production, base)
+          return false unless production.is_a?(Hash)
+          return stock_database?(production, base, "storage/production.sqlite3") unless production.key?("primary")
+
+          solid = production.keys - [ "primary" ]
+          return false unless (solid - SOLID_DATABASES).empty?
+          return false unless stock_database?(production["primary"], base, "storage/production.sqlite3")
+
+          ok = solid.all? do |name|
+            stock_database?(production[name], base, "storage/production_#{name}.sqlite3",
+                            "migrations_paths" => "db/#{name}_migrate")
+          end
+          @solid_databases = solid if ok
+          ok
+        end
+
+        # The --skip-kamal variant leaves `database:` commented out.
+        def stock_database?(db, base, database, extra = {})
+          expected = base.merge(extra)
+          [ expected, expected.merge("database" => database) ].include?(db)
+        end
+
+        def database_change_instructions
+          config = parse_database_yml(read(DATABASE_YML))
+          config = {} unless config.is_a?(Hash)
+          missing = ENVIRONMENTS.reject { |env| tenanted_environment?(config[env]) }
+
+          <<~MSG
+
+            #{DATABASE_YML} is not the stock file `rails new` writes, so partitia-tenanted
+            will not rewrite it. These environments lack the global and tenant databases:
+            #{missing.join(', ')}
+
+            Give each environment a `global` database and a `tenant` database with
+            `tenanted: true`, each taking its migrations from the registry (keep any
+            other databases you have, e.g. production cache/queue/cable):
+
+            #{rendered_database_template.gsub(/^/, '    ')}
+          MSG
+        end
+
+        def rendered_database_template
+          source = File.read(File.join(self.class.source_root, "database.yml"))
+          ERB.new(source, trim_mode: "-").result(binding)
+             .lines.reject { |l| l.start_with?("#") }.join.gsub(/\n{3,}/, "\n\n").strip
         end
       end
     end

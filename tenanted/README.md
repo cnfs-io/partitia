@@ -1,291 +1,154 @@
 # Partitia::Tenanted
 
-Multi-tenant support for CNFS Rails apps, built on
-[activerecord-tenanted](https://github.com/basecamp/activerecord-tenanted)
-(a separate SQLite database per tenant).
+Optional multi-tenancy for Partitia Rails apps (ADR 0003), built on
+[activerecord-tenanted](https://github.com/basecamp/activerecord-tenanted):
+one SQLite database per tenant.
 
 It provides:
 
-- a global **Tenant** registry (one shared database), carrying operator/admin-level tenant config;
-- a per-tenant **Account** settings singleton (one row in each tenant's own database), carrying the tenant's self-service config;
-- automatic tenant database provisioning when a `Tenant` is created;
-- subdomain → tenant request resolution;
-- Tailwind-styled MVC for both, rendered straight from the gem and ejectable into your app when you want to customize;
-- a tenant-aware migration status rake task;
-- a per-database migration-path setup (conventional copy-in by default, with an
-  opt-in to read migrations in place from the gems).
+- the **global plane**: a shared database holding the `Partitia::Tenanted::Tenant`
+  registry;
+- the **tenant plane**: one database per tenant, keyed by the tenant's immutable
+  handle, provisioned when a `Tenant` is created, with an `after_provision` hook
+  registry that other engines (iam) seed through;
+- the reserved **platform** database (handle `platform`): never a tenant, reached
+  only through `Partitia::Tenanted.with_platform`;
+- request → tenant resolution (subdomain by default; host map and header
+  resolvers included);
+- the tenant registry UI (`/tenants`, the platform console) and the unknown-tenant
+  page (`/tenant-unknown`), both ejectable;
+- migration status across the global, platform and tenant databases.
 
----
+The engine is not isolated: it draws `/tenants` and `/tenant-unknown` into the
+app's routes, and the app subclasses its controllers.
 
-## Prerequisites & assumptions
-
-Read this before installing — the installer is invasive.
-
-- **SQLite + activerecord-tenanted.** This gem assumes the database-per-tenant
-  SQLite model. It is intended for **new apps**, or apps not yet committed to a
-  database layout.
-- **The installer rewrites `config/database.yml`.** It replaces your database
-  config with a two-database (tenanted `tenant` + plain `global`) layout. If
-  you have an existing, customized `database.yml`, back it up first.
-- **A brief "won't boot" window during install.** Because install rewrites
-  `database.yml` and adds a tenanted connection, the app is not expected to boot
-  until you have completed install **and** run `db:migrate`. Don't try to start
-  the server mid-install.
-- Designed for **Rails 8.1+** and **Ruby 3.2+**.
-
----
-
-## Installation
-
-### 1. Add the gems
+## Install
 
 ```ruby
 # Gemfile
 gem "partitia-tenanted"
-gem "activerecord-tenanted"   # the underlying per-tenant DB engine
 ```
 
 ```bash
 bundle install
-```
-
-> `partitia-tenanted` depends on `partitia-support` (a lean foundation gem) automatically.
-> The optional console helpers activate only if you also use `partitia-dev` in
-> development/test — they are not required.
-
-### 2. Run the installer
-
-```bash
 bin/rails generate partitia:tenanted:install
 ```
 
-This wires your app for multi-tenancy. Specifically, it:
+The generator:
 
-- calls `tenanted` in `app/models/application_record.rb` (every
-  `ApplicationRecord` model becomes tenant-scoped);
-- includes `Partitia::Tenanted::TenantResolution` in your `ApplicationController`
-  (resolves the tenant from the request subdomain);
-- rewrites `config/database.yml` (tenanted `tenant` + plain `global` DB);
-- sets `config.action_dispatch.tld_length = 0` in development so
-  `*.localhost` subdomains resolve;
-- creates thin host controllers
-  (`TenantsController < Partitia::Tenanted::TenantsController`, likewise for accounts)
-  so routes resolve in your namespace and you can customize later;
-- creates `storage/tenants/` for the per-tenant database files;
-- runs `db:migrate` to create the **global** database (the tenant registry).
+- writes `config/database.yml` with a `global` database and a `tenant` database
+  (`tenanted: true`) in **every environment**, each taking its migrations from
+  the registry (`<%= Partitia::Support.migrations_paths[:global] %>`,
+  `[:tenant]`). It does this only when the file is missing or is still the stock
+  file `rails new` wrote (production's Solid cache/queue/cable databases are
+  kept). A file that already has the layout is left alone. A customized file
+  without it stops the generator before anything is changed, with the layout to
+  adopt printed;
+- adds `tenanted "tenant"` to `ApplicationRecord` and
+  `include Partitia::Tenanted::TenantResolution` to `ApplicationController`;
+- sets `config.action_dispatch.tld_length = 0` in development, so
+  `acme.localhost` resolves to subdomain `acme`;
+- creates `TenantsController`, `TenantNotFoundController` and
+  `config/initializers/partitia_tenanted.rb` if they don't exist;
+- runs `db:migrate`, creating the global database;
+- prints the entry points and what is left to do.
 
-The installer is idempotent for the in-place edits — re-running it skips edits
-that are already present — but it **force-overwrites `config/database.yml`**.
+Every step is guarded: a second run changes nothing and asks nothing.
 
-### 3. Verify the install (the sanity-check ladder)
+The `:tenant` (`db/migrate`) and `:global` (`db/global_migrate`) migration scopes
+are registered by the engine; the app adds nothing for them.
 
-Run these three checks in order. Each isolates one layer, so if something
-breaks you know roughly where.
+### After install
 
-#### Check 1 — server boots, bare domain shows the (empty) tenant list
+1. Decide who may use the platform console: set
+   `Partitia::Tenanted.platform_console_guard` (a callable run as a
+   `before_action` in controller context). Unset, `/tenants` answers 403.
+2. Provision the reserved platform database, once per environment:
+   `Partitia::Tenanted.provision_platform!(owner_email: "you@example.com")`.
+3. Create tenants:
+   `Partitia::Tenanted::Tenant.create!(name: "Acme", subdomain: "acme", owner_email: "owner@acme.test")`,
+   then visit `http://acme.localhost:3000`.
 
-```bash
-bin/rails server
-```
+With partitia-iam and partitia-cognito the guard, identity resolver and a Rack
+tenant resolver (so mounted engines such as `/auth` run in the tenant's
+database) go in one initializer; `spec/dummy/config/initializers/identity.rb`
+in this repo is the reference.
 
-Visit **http://localhost:3000**. You should see an empty **Tenants** list with a
-"New tenant" button.
+## Migrations
 
-> Confirms: routing, the bare-domain constraint, and that the global database
-> migrated (the `tenants` table exists). If this fails, look at
-> `config/database.yml` and whether `db:migrate` created the global DB.
+Migrations are read in place from the app and every registered engine through
+`Partitia::Support.migrations_paths`; nothing is copied. Tenant-plane tables
+live in `db/migrate`, global-plane tables in `db/global_migrate`. Tenant
+databases are migrated when provisioned; `bin/rails db:migrate:tenant` (from
+activerecord-tenanted) migrates existing ones, `bin/rails db:migrate` the global
+database.
 
-#### Check 2 — create a tenant in the console (the core test)
+`partitia:tenanted:install:global_migrations` copies every engine's global
+migrations into `db/global_migrate`, for an app that hardcodes
+`migrations_paths` instead.
 
-```bash
-bin/rails console
-```
+### Migration status
 
-```ruby
-Partitia::Tenanted::Tenant.create!(name: "Acme", subdomain: "acme")
-
-# The real test — does the tenant DB exist, is it migrated, and was its
-# Account settings singleton seeded with the tenant's name?
-ApplicationRecord.with_tenant("acme") { Account.instance }
-# => #<Account id: 1, name: "Acme", ...>
-```
-
-> Confirms the entire core: tenant database provisioning, the tenant DB
-> migrating (the `accounts` table + its singleton constraint), the `with_tenant`
-> context, and the `Account` singleton seeding. A new file should now exist at
-> `storage/tenants/acme.sqlite3`.
-
-You can also confirm the singleton is enforced:
-
-```ruby
-ApplicationRecord.with_tenant("acme") do
-  Account.create!(name: "Second")   # expected to FAIL (singleton: only id 1 allowed)
-end
-```
-
-#### Check 3 — subdomain shows the account settings page
-
-Visit **http://acme.localhost:3000**. You should see the **Account settings**
-page for the Acme tenant (name "Acme"), with an "Edit settings" link.
-
-> Confirms: subdomain resolution, `tld_length`, and the subdomain root route
-> (`accounts#show`). If you land on the tenant list instead, `tld_length` isn't
-> taking effect.
-
-If all three pass, the install is working.
-
----
-
-## Day-to-day usage
-
-### The two config models
-
-| | Where | Who edits it | Surface |
-|---|---|---|---|
-| **Tenant** | global database | operator/admin | bare domain (`/tenants`) |
-| **Account** | the tenant's own database (singleton) | the tenant | subdomain (`/account`) |
-
-When a `Tenant` is created, its database is provisioned and its `Account`
-singleton is seeded with the tenant's name. The two names then diverge freely —
-the admin manages the `Tenant`, the tenant manages their `Account`.
-
-### Console helpers (with `partitia-dev`)
-
-If `partitia-dev` is loaded, the console gains:
-
-```ruby
-vst "acme"   # switch the console into the acme tenant's database context
-vst          # clear back to the global/untenanted context
-
-t            # => Partitia::Tenanted::Tenant ;   ta / tc / tf / tl  (all / create / find / last)
-a            # => Account ;  aa / ac / af / al
-```
-
-The prompt also gains a current-tenant segment while a tenant context is
-active, e.g. `[development][acme] cnfs(main)>`.
-
-### Tenant migration status
-
-activerecord-tenanted ships `db:migrate:tenant` but no status task. This gem
-adds one that works even when a tenant has pending migrations:
+activerecord-tenanted has no status task for tenant databases, and its tenant
+connections raise `PendingMigrationError` when a migration is pending. This one
+reads each database through its own temporary connection, so pending migrations
+show as `down`:
 
 ```bash
-ARTENANT=acme bin/rails db:migrate:status:tenant   # one tenant
-bin/rails db:migrate:status:tenant                 # every tenant
+bin/rails partitia:tenanted:migrate:status                     # every database
+ARTENANT=<handle> bin/rails partitia:tenanted:migrate:status   # one (also global, platform)
 ```
 
----
+```
+global: storage/development.sqlite3
 
-## Customizing (ejecting from the gem)
+ Status   Migration ID    Migration Name
+--------------------------------------------------
+   up     20260601033001  Create partitia tenanted tenants
 
-By default the tenant/account controllers and views are served **directly from
-the gem** — you don't have copies in your app. When you want to customize, eject
-the piece you care about; everything else keeps coming from the gem.
+platform (reserved): storage/development/platform.sqlite3
+...
 
-### Customize a controller
+tenant ccjq42tq (acme): storage/development/ccjq42tq.sqlite3
 
-Your app already has thin host controllers from the installer. Override actions
-there (call `super` or replace entirely):
+ Status   Migration ID    Migration Name
+--------------------------------------------------
+   up     20260703120001  Create partitia iam accounts
+  down    20260703120002  Create partitia iam principals
 
-```ruby
-class TenantsController < Partitia::Tenanted::TenantsController
-  def index
-    super
-    # ...your additions
-  end
-end
+3 databases; pending: tenant ccjq42tq (acme) (1)
 ```
 
-### Eject views
+A database whose file doesn't exist yet is listed as `(database not created)`
+and is not created.
 
-Copy a resource's views into your app, where they take precedence over the
-gem's:
+## Customizing
+
+Override actions in the host controllers (`TenantsController`,
+`TenantNotFoundController`), calling `super` or replacing them.
+
+Eject views into the app, where they take precedence over the gem's:
 
 ```bash
-bin/rails generate partitia:tenanted:views tenants    # just tenant views
-bin/rails generate partitia:tenanted:views accounts   # just account views
+bin/rails generate partitia:tenanted:views tenants
+bin/rails generate partitia:tenanted:views tenant_not_found
 bin/rails generate partitia:tenanted:views            # both
 ```
 
-Once ejected, those views are yours; the gem's copies are no longer used for
-that resource.
+## Console (with partitia-dev)
 
----
+When partitia-dev is loaded, `rails console` gains `switch!("<handle>")` to enter
+a tenant's database (`switch!` alone to leave), `Tenant` shortcuts under `t`,
+and the current tenant in the prompt.
 
-## Migrations: how they work
+## Notes
 
-The gem ships two kinds of migration:
-
-- **Global migration** (the `tenants` registry table) — runs against the
-  `global` database.
-- **Tenant migration** (the `accounts` singleton, plus anything your app or
-  other engines add) — runs against each per-tenant database as it is
-  provisioned.
-
-There are two ways to source them, chosen per database in `config/database.yml`.
-The installed file **defaults to copy-in** and carries the in-place alternative
-commented out beside each database.
-
-### Default: copy-in (conventional Rails)
-
-Each database points at a normal path in your app (`db/migrate`,
-`db/global_migrate`), so **your app owns its migrations**. Pull the gems'
-migrations in the standard Rails way, then version them like any others:
-
-```bash
-bin/rails partitia_tenanted:install:migrations          # TENANT migrations (db/migrate)
-bin/rails railties:install:migrations               # every mounted engine's tenant migrations
-bin/rails partitia:tenanted:install:global_migrations   # GLOBAL migrations (db/global_migrate)
-```
-
-The first two are Rails' own engine-migration tasks; they only see the standard
-`db/migrate` path, so they copy the **tenant** migrations. The **global**
-migrations live under the non-standard `db/global_migrate` scope that Rails
-doesn't know about, so `partitia:tenanted:install:global_migrations` fills that gap
-— it copies the global migrations of *every* registered CNFS engine into
-`db/global_migrate` in one run. All three are idempotent (re-running skips
-migrations already copied).
-
-Nothing about this is otherwise cnfs-specific — it's the ordinary
-engine-migration workflow, and it's the stable choice for released apps.
-
-### Opt-in: in-place (read straight from the gems)
-
-Uncomment the `Partitia::Support.migrations_paths[...]` line under a database (and
-comment its hardcoded path) to have that database read migrations directly from
-the gems — nothing copied. Each gem's paths are collected into
-`Partitia::Support.migrations_paths` at boot, keyed by scope (`:tenant` → `db/migrate`,
-`:global` → `db/global_migrate`, declared by `partitia-tenanted`'s engine). A
-migration added to any CNFS gem is then picked up on `bundle update` with no
-re-copy, across every CNFS engine that ships migrations (e.g. `partitia_okf`) at
-once. Useful during rapid co-development across several gems and apps.
-
-The presence of that ERB is the whole switch — there is no separate config flag.
-
-> **In in-place mode, treat shipped tenant migrations as append-only and
-> immutable across gem versions.** Because tenant databases are provisioned
-> continuously and read migrations from the gem in place, editing an
-> already-released tenant migration can put existing tenant databases out of
-> sync with new ones. Add new migrations; never alter shipped ones.
-
----
-
-## Notes & caveats
-
-- **`tld_length = 0` is development-only.** It makes `acme.localhost` resolve as
-  subdomain `acme`. Production subdomain resolution relies on real DNS and the
+- `tld_length = 0` is development-only; production resolves subdomains with the
   default `tld_length`.
-- **`partitia-dev` is optional and not a dependency.** Multi-tenancy and the Pry
-  console helpers are independent; the helpers simply activate if `partitia-dev`
-  happens to be present.
-
----
-
-## Contributing
-
-Bug reports and pull requests welcome.
+- Request tracing: `config.partitia_tenanted.trace = true` in
+  `config/application.rb` or an environment file adds the request-span
+  middleware (a no-op without partitia-telemetry).
 
 ## License
 
-Available as open source under the terms of the
-[MIT License](https://opensource.org/licenses/MIT).
+[MIT](https://opensource.org/licenses/MIT).

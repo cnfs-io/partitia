@@ -8,10 +8,10 @@ Gem::Specification.new do |spec|
   spec.homepage    = "TODO"
   spec.summary     = "Multi-tenant support for CNFS Rails apps (database-per-tenant)."
   spec.description = "Provides the tenant layer for CNFS apps built on " \
-                    "activerecord-tenanted: a global Tenant registry, a per-tenant " \
-                    "Account settings singleton, subdomain tenant resolution, " \
-                    "tenant-aware MVC (with eject generators), a tenant migration " \
-                    "status task, and engine migration-path registration."
+                    "activerecord-tenanted: a global Tenant registry, tenant " \
+                    "provisioning, the reserved platform database, request tenant " \
+                    "resolution, tenant-aware MVC (with eject generators) and " \
+                    "migration status across tenant databases."
   spec.license     = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"

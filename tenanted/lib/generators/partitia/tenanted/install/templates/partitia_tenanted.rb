@@ -23,3 +23,14 @@ Partitia::Tenanted.tenant_not_found_handler = ->(tenant_name) do
   flash[:unknown_tenant] = tenant_name
   redirect_to tenant_unknown_path
 end
+
+# Who may use the platform console (/tenants, the tenant registry). Runs in
+# controller context as a before_action. Unset, it DENIES every request
+# (403), so the registry is closed until you decide who gets in, e.g.:
+#
+#   Partitia::Tenanted.platform_console_guard = -> do
+#     head :forbidden unless current_user&.platform_admin?
+#   end
+#
+# With partitia-iam and partitia-cognito, see the identity wiring in the
+# partitia-tenanted README.

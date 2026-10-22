@@ -4,45 +4,32 @@ module Partitia
   module Tenanted
     module Generators
       # Ejects (copies) the engine's views for a resource into the host app, so
-      # the app owns and can customize them. This is the phase-2 customization
-      # path: in phase 1 the engine's views render directly (Rails view
-      # resolution finds them); once ejected, the host's copies take precedence.
+      # the app owns and can customize them. Until then the engine's views render
+      # directly; once ejected, the host's copies take precedence.
       #
       #   bin/rails generate partitia:tenanted:views tenants
-      #   bin/rails generate partitia:tenanted:views accounts
-      #   bin/rails generate partitia:tenanted:views            # both
-      #
+      #   bin/rails generate partitia:tenanted:views tenant_not_found
+      #   bin/rails generate partitia:tenanted:views            # all
       class ViewsGenerator < Rails::Generators::Base
-        RESOURCES = %w[ tenants accounts ].freeze
+        RESOURCES = %w[ tenants tenant_not_found ].freeze
+
+        source_root File.expand_path("../../../../../app/views", __dir__)
 
         argument :resource, type: :string, required: false,
-                 desc: "Which views to eject: tenants, accounts, or omit for all"
+                 desc: "Which views to eject: #{RESOURCES.join(', ')}, or omit for all"
 
         desc "Copy partitia-tenanted views into the host app for customization."
 
-        def copy_views
-          targets = resource ? [ resource ] : RESOURCES
+        def check_resource
+          return if resource.nil? || RESOURCES.include?(resource)
 
-          targets.each do |name|
-            unless RESOURCES.include?(name)
-              say_status :error, "Unknown resource #{name.inspect}. Known: #{RESOURCES.join(', ')}", :red
-              next
-            end
-
-            source = engine_views_path.join(name)
-            Dir.glob(source.join("**", "*")).select { |f| File.file?(f) }.each do |file|
-              rel = Pathname.new(file).relative_path_from(engine_views_path)
-              copy_file file, "app/views/#{rel}"
-            end
-          end
+          raise Thor::Error, "Unknown resource #{resource.inspect}. Known: #{RESOURCES.join(', ')}"
         end
 
-        private
-
-        def engine_views_path
-          @engine_views_path ||= Pathname.new(
-            File.expand_path("../../../../../app/views", __dir__)
-          )
+        def copy_views
+          (resource ? [ resource ] : RESOURCES).each do |name|
+            directory name, "app/views/#{name}"
+          end
         end
       end
     end
