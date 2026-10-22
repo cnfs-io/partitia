@@ -38,7 +38,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 
 - [x] `new`, `list`, `server` (0.0.0.0 through `bin/dev`), `log`, `engine new`, `template`,
       `path`/`cd`, `config`; bats suite
-- [ ] `engine check` — an engine against the contract (D2)
+- [x] `engine check [gem...]` — the contract's static checks per gem (naming, Ruby, lockfile
+      platforms, CI matrix, test schema, no `force: true`, registration, install generator, ERB
+      views as a warning until D5); failures and warnings only unless `--all`; exit 1 on failure
 - [ ] `services` — the pcm services the app's engines declare, up/down
 - [ ] `smoke` — the D6 acceptance as a command
 - [x] `ci [gem...]` — what CI runs (Ruby and gem matrix from `.github/workflows/ci.yml`), in
