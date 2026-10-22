@@ -1,5 +1,6 @@
 require "jwt"
 require "net/http"
+require "openssl"
 require "json"
 require "uri"
 
@@ -16,6 +17,12 @@ module Partitia
         # (defeats alg:none / algorithm-confusion attacks).
         ALGORITHMS = %w[RS256].freeze
         DEFAULT_SCOPES = %w[openid email profile].freeze
+        # Connection-level failures talking to the IdP: refused/reset/unreachable
+        # (SystemCallError covers the Errno family), open/read timeouts, DNS
+        # (SocketError), TLS, and a connection dropped mid-response.
+        CONNECTION_ERRORS = [
+          SystemCallError, Timeout::Error, SocketError, OpenSSL::SSL::SSLError, EOFError
+        ].freeze
 
         attr_reader :issuer, :client_id
 
@@ -60,6 +67,9 @@ module Partitia
             # secret, or response body.
             event[:outcome] = "ok"
             tokens
+          rescue UnavailableError
+            event[:outcome] = "idp_unavailable"
+            raise
           rescue StandardError
             event[:outcome] = "failed"
             raise
@@ -96,6 +106,10 @@ module Partitia
             event[:outcome] = verify_failure_reason(e)
             logger.warn { "verify failed: #{e.message}" }
             raise VerificationError, e.message
+          rescue UnavailableError
+            # JWKS fetch couldn't reach the IdP — not a token fault.
+            event[:outcome] = "idp_unavailable"
+            raise
           rescue VerificationError => e
             # nonce mismatch / unknown signing key after refetch — a security outcome.
             event[:outcome] = verify_failure_reason(e)
@@ -187,12 +201,14 @@ module Partitia
         # the debug log line), so it is NOT a span attribute.
         def fetch_json(url, endpoint:)
           instrument(:http, method: "GET", endpoint: endpoint) do |event|
-            response = Net::HTTP.get_response(URI(url))
+            response = reach_idp(event) { Net::HTTP.get_response(URI(url)) }
             event[:status] = response.code.to_i
             unless response.is_a?(Net::HTTPSuccess)
-              # A real fault (IdP down / misconfig). Discovery/JWKS URLs aren't secret.
+              # A real fault (IdP down / misconfig) — unavailable, not a token
+              # fault. Discovery/JWKS URLs aren't secret.
+              event[:outcome] = "idp_unavailable"
               logger.error { "http GET #{url} -> #{response.code}" }
-              raise VerificationError, "GET #{url} -> #{response.code}"
+              raise UnavailableError, "identity provider #{issuer_host} answered #{response.code} (#{endpoint})"
             end
 
             JSON.parse(response.body)
@@ -203,7 +219,7 @@ module Partitia
           # `form` (code/client_secret) is intentionally NOT in the payload, and
           # the token `url` stays off the span — only the bounded endpoint label.
           instrument(:http, method: "POST", endpoint: "token") do |event|
-            response = Net::HTTP.post_form(URI(url), form)
+            response = reach_idp(event) { Net::HTTP.post_form(URI(url), form) }
             event[:status] = response.code.to_i
             unless response.is_a?(Net::HTTPSuccess)
               # Token endpoint: host + status only, never the form body (code/secret).
@@ -213,6 +229,23 @@ module Partitia
 
             JSON.parse(response.body)
           end
+        end
+
+        # Translate a connection-level failure into UnavailableError, whose
+        # message carries the issuer host and the exception class only (never a
+        # URL with params, the form body or a secret); the broker logs it at warn.
+        # Other errors pass through untouched.
+        def reach_idp(event)
+          yield
+        rescue *CONNECTION_ERRORS => e
+          event[:outcome] = "idp_unavailable"
+          raise UnavailableError, "identity provider #{issuer_host} unreachable (#{e.class})"
+        end
+
+        def issuer_host
+          URI(@issuer).host || @issuer
+        rescue URI::InvalidURIError
+          @issuer
         end
       end
     end

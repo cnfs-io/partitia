@@ -27,7 +27,7 @@ RSpec.describe "partitia_cognito diagnostic logging", :logs do
 
       expect do
         oidc_provider.authorization_url(redirect_uri: "https://h/cb", state: "s", nonce: "n", code_challenge: "c")
-      end.to raise_error(Partitia::Cognito::Providers::VerificationError)
+      end.to raise_error(Partitia::Cognito::Providers::UnavailableError)
 
       expect(captured_log.at(:error).join("\n")).to match(%r{http GET .+ -> 500})
     end

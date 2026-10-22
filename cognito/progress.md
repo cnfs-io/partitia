@@ -277,3 +277,15 @@ data**.
   live discovery spec is no longer tag-excluded; it skips unless `AUTHENTIK_ISSUER`
   is set and answers.
 - Specs: 51 → 63 examples (+10 generator, +2 engine), 1 pending (the live spec).
+
+## D3 follow-up — unreachable IdP is a 503 (2026-10-22)
+
+- `Providers::UnavailableError` (not a `VerificationError`): the OIDC provider raises
+  it on connection-level failures (`SystemCallError`, `Timeout::Error`, `SocketError`,
+  `OpenSSL::SSL::SSLError`, `EOFError`) and on a non-2xx discovery/JWKS GET. A
+  non-2xx token POST is still a `VerificationError` (an `invalid_grant` is a flow
+  failure, not an outage).
+- `SessionsController#new`/`#callback` rescue it inside their instrument blocks:
+  `outcome: "idp_unavailable"`, a warn line with the issuer host, a 503 inline HTML
+  page (Phlex in D5) or plain text. Provider events carry the same outcome.
+- Specs: 67 → 78 examples, 1 pending (the live spec).

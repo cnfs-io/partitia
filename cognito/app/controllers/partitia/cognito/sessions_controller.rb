@@ -11,7 +11,7 @@ module Partitia
       # GET /login — start the auth-code + PKCE flow: stash state/nonce/verifier
       # (and an optional bootstrap/invite link_token), then redirect to the IdP.
       def new
-        instrument(:login_start, has_link_token: params[:link_token].present?) do
+        instrument(:login_start, has_link_token: params[:link_token].present?) do |event|
           logger.debug { "login start: link_token=#{params[:link_token].present?}" }
           state = SecureRandom.urlsafe_base64(32)
           nonce = SecureRandom.urlsafe_base64(32)
@@ -35,6 +35,10 @@ module Partitia
             ),
             allow_other_host: true
           )
+          event[:outcome] = "redirected"
+        rescue Partitia::Cognito::Providers::UnavailableError => e
+          event[:outcome] = "idp_unavailable"
+          idp_unavailable(e)
         end
       end
 
@@ -61,6 +65,9 @@ module Partitia
               code_verifier: stash["code_verifier"]
             )
             assertion = Partitia::Cognito.provider.verify(id_token: tokens["id_token"], nonce: stash["nonce"])
+          rescue Partitia::Cognito::Providers::UnavailableError => e
+            event[:outcome] = "idp_unavailable"
+            next idp_unavailable(e)
           rescue Partitia::Cognito::Providers::VerificationError
             # Never leak claim contents or provider internals into the user-facing error.
             event[:outcome] = "verification_failed"
@@ -107,6 +114,26 @@ module Partitia
       def establish_session(principal_id)
         reset_session
         session[Partitia::Cognito.session_key] = principal_id
+      end
+
+      # The IdP can't be reached: a 503, not a failed-sign-in redirect (a retry
+      # can't help until the IdP is back). The message names the issuer host only.
+      #
+      # Deliberately an inline minimal HTML string, not an ERB template: engine
+      # views become Phlex in D5, and this page moves there with them.
+      def idp_unavailable(error)
+        logger.warn { "sign-in unavailable: #{error.message}" }
+        message = I18n.t("partitia_cognito.sessions.unavailable")
+        respond_to do |format|
+          format.html do
+            render status: :service_unavailable, html: <<~HTML.html_safe # rubocop:disable Rails/OutputSafety
+              <!DOCTYPE html>
+              <html><head><meta charset="utf-8"><title>Sign-in unavailable</title></head>
+              <body><h1>Sign-in unavailable</h1><p>#{ERB::Util.html_escape(message)}</p></body></html>
+            HTML
+          end
+          format.any { render status: :service_unavailable, plain: message, content_type: "text/plain" }
+        end
       end
 
       def fail_flow(reason)

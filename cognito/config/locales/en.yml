@@ -1,6 +1,7 @@
 en:
   partitia_cognito:
     sessions:
+      unavailable: "Sign-in is unavailable: the identity provider can't be reached."
       failures:
         default: "Sign-in could not be completed. Please try again."
         invalid_state: "Your sign-in session expired or was invalid. Please try again."

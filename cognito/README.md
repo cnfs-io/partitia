@@ -72,6 +72,12 @@ Module slots (callables, not config): `identity_resolver` and `provider` raise
 `ConfigurationError` when unset; `policy_resolver` defaults to `:invite_only`;
 `session_key`, `after_sign_in_path`, `after_sign_out_path`.
 
+When the IdP can't be reached (connection refused, timeout, DNS, TLS, a non-200
+discovery or JWKS response), `/auth/login` and `/auth/callback` answer **503** with a
+plain "identity provider can't be reached" page (text for non-HTML clients), log a
+warning with the issuer host, and record `outcome: "idp_unavailable"`. Token
+verification failures still redirect with a flash.
+
 ## With partitia-iam
 
 The generated initializer wires `identity_resolver` to

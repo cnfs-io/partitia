@@ -9,6 +9,12 @@ module Partitia
       # never leaks its message into a user-facing error.
       class VerificationError < Partitia::Cognito::Error; end
 
+      # Raised when the IdP can't be reached at all (connection refused, timeout,
+      # DNS, TLS, or a non-200 discovery/JWKS response). Not a VerificationError:
+      # the broker answers it with a 503, not a failed-sign-in redirect. The
+      # message names the issuer host only, never a URL with params or a secret.
+      class UnavailableError < Partitia::Cognito::Error; end
+
       # The provider duck (Plan 003 WS2). Nothing outside a provider knows which
       # IdP is configured; the broker talks only to this surface.
       class Base
