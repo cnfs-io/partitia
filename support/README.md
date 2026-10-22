@@ -162,6 +162,11 @@ primary:
   migrations_paths: <%= Partitia::Support.migrations_paths[:primary] %>
 ```
 
+`bin/rails g partitia:support:install` adds that line to the primary database of
+development, test and production (the flat block, or `primary:` in a multi-database
+block), after its `database:` line. It is safe to re-run, and where it can't tell
+where the line goes it changes nothing there and prints what to add.
+
 If a database does **not** declare `migrations_paths`, Rails falls back to its
 default (`db/migrate`). Declare it only when you want the engine paths folded in.
 

@@ -1,0 +1,25 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: app_development
+  # username: app
+  # host: localhost
+
+test:
+  <<: *default
+  database: app_test
+
+production:
+  primary: &primary_production
+    <<: *default
+    database: app_production
+    username: app
+    password: <%= ENV["APP_DATABASE_PASSWORD"] %>
+  cache:
+    <<: *primary_production
+    database: app_production_cache
+    migrations_paths: db/cache_migrate

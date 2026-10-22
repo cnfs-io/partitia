@@ -211,3 +211,31 @@ bin/rubocop lib spec/partitia-support
 bundle exec rspec            # 76 examples (15 new in shell_spec.rb .stream)
 bin/rubocop lib spec/partitia-support
 ```
+
+---
+
+## Install generator wires every environment (ARCHITECTURE §5) — shipped
+
+`partitia:support:install` now injects
+`migrations_paths: <%= Partitia::Support.migrations_paths[:primary] %>` into the
+primary database of development, test and production. Placement is read by
+`Generators::DatabaseYml` (pure Ruby, line-based, no YAML round-trip, so comments
+and ERB survive): a flat env block, or its `primary:` in a multi-database block;
+after `database:`, else `url:`, else the block's last key (a commented-out
+database). Anchored on structure, not on sqlite filenames.
+
+- Idempotent per environment: a block already carrying the line is `identical`; a
+  block with a different `migrations_paths` is never rewritten — reported instead.
+- Can't place it (env missing, empty, multi-db without `primary:`): changes
+  nothing there, says what to add and where, and repeats it in the closing
+  "the host still has to" list. Keeps the `spec/dummy` fallback.
+- Injection is bottom-up via `insert_into_file` anchored on the file's exact
+  prefix (unique match); `force: true` there only defeats Thor's
+  "text already somewhere in the file" skip.
+
+**How to run**
+
+```
+bundle exec rspec   # 95 examples (17 new: spec/generators/, the generator ones in a child process to keep the suite Rails-free)
+bin/rubocop
+```
