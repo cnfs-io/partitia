@@ -1,9 +1,0 @@
-# ⚠️  DEV/TEST SCAFFOLD — written by `rails g chatter:install:dev`.
-class CreatePeople < ActiveRecord::Migration[<%= ActiveRecord::Migration.current_version %>]
-  def change
-    create_table :people do |t|
-      t.string :name, null: false
-      t.timestamps
-    end
-  end
-end

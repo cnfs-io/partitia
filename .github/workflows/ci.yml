@@ -11,12 +11,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        gem: [ chatter, cognito, dev, iam, support, telemetry, tenanted ]
+        include:
+          - { gem: cognito,   ruby: ruby-4.0.4 }
+          - { gem: dev,       ruby: ruby-4.0.4 }
+          - { gem: iam,       ruby: ruby-4.0.4 }
+          - { gem: support,   ruby: ruby-4.0.4 }
+          - { gem: telemetry, ruby: ruby-4.0.4 }
+          - { gem: tenanted,  ruby: ruby-4.0.4 }
+          - { gem: ui,        ruby: ruby-4.0.5 }
     defaults:
       run:
         working-directory: ${{ matrix.gem }}
     env:
-      RUBY_VERSION: ruby-4.0.4
+      RUBY_VERSION: ${{ matrix.ruby }}
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
       - name: Checkout code
