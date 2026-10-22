@@ -1,0 +1,23 @@
+source "https://rubygems.org"
+
+# Specify your gem's dependencies in cnfs_support.gemspec.
+gemspec
+
+gem "puma"
+
+gem "sqlite3"
+
+# Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
+gem "rubocop-rails-omakase", require: false
+
+group :development, :test do
+  gem "rspec"
+
+  # SDK + in-memory exporter are HOST-side concerns, pulled in here ONLY so the
+  # instrumentation specs can prove that spans actually emit when a host wires
+  # the SDK. The gem itself depends on the OTel API only (see the gemspec).
+  gem "opentelemetry-sdk"
+end
+
+# Start debugger with binding.b [https://github.com/ruby/debug]
+# gem "debug", ">= 1.0.0"
