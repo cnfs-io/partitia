@@ -85,9 +85,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [ ] In order: support, dev, telemetry, tenanted, iam, cognito; each installed into a fresh app,
       not only its dummy
 - [ ] dev gets specs; iam's install generator is wired into the templates
-- [ ] Known from the rename: tenanted's dummy test DB needs a manual `db:prepare` before its
-      specs pass; `partitia:tenanted:views` has no `source_root`; ui's `eager_load!` fails on
-      the RubyUI Button
+- [ ] Known from the rename: `partitia:tenanted:views` has no `source_root`; ui's `eager_load!`
+      fails on the RubyUI Button (tenanted's test DB is fixed: `maintain_test_schema!`)
+- [ ] The gaps table in `ARCHITECTURE.md`, engine by engine
 
 ## D4 — pcm wiring
 
