@@ -56,7 +56,9 @@ An engine meets every rule, or the exception is written here with its reason.
 
 ### 3. Registration
 
-- Every engine registers itself, whether or not it has tables or views today (Q6):
+- Every engine (a `Rails::Engine`; the registry takes nothing else) registers itself, whether
+  or not it has tables or views today (Q6). The railtie gems (support, dev, telemetry) have
+  nothing to register:
   `Partitia::Support.plugins << self` in its engine class. That is how its migrations reach the
   app (`Partitia::Support.migrations_paths`, per scope) and its views and components reach
   Tailwind (`Partitia::Support.source_paths`).
@@ -67,7 +69,8 @@ An engine meets every rule, or the exception is written here with its reason.
 
 ### 4. Configuration
 
-- One `Partitia::Support::Config` subclass, `config_name :partitia_<name>`. Values resolve from
+- Settings live in one `Partitia::Support::Config` subclass, `config_name :partitia_<name>` (an
+  engine with no settings has none; callables are not settings, see below). Values resolve from
   `config/partitia_<name>.yml`, then credentials, then `PARTITIA_<NAME>_*`; nothing reads ENV
   directly.
 - Secrets only from credentials or ENV. A development fallback is allowed only when it is
@@ -120,7 +123,8 @@ An engine meets every rule, or the exception is written here with its reason.
 - Phlex classes that use RubyUI components; no ERB. The engine lists the RubyUI components it
   uses, and its installer adds them to the app. The app's Phlex/RubyUI setup (namespaces,
   `Components::Base`, design tokens) comes from the app template (D5), modelled on the earlier
-  `fudge` app.
+  `fudge` app. Until that template exists (D5) the existing ERB views stay; converting them is
+  D5's, not D3's.
 - Engine controllers inherit the host's `ApplicationController` unless isolation is the point
   (cognito's broker), which is then stated.
 
@@ -145,7 +149,7 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 |---|---|
 | support | Install generator only finds the sqlite development line in `database.yml` and says nothing when it can't, and wires development only (§5). It is a railtie, not an engine, so §3, §6 and §8 don't apply |
 | dev | Exempt from §3–§6 and §9 (Q1). No specs |
-| telemetry | No dependency on support, so its span bridge can't check `RedactionConfig` (§2, §7). No config class: the generator writes an initializer reading `OTEL_*`, and nothing covers the error tracker (§4, §7). Generator re-run relies on Thor's conflict prompt (§5). Not registered (§3). No `partitia.services` (§9) |
+| telemetry | No dependency on support, so its span bridge can't check `RedactionConfig` (§2, §7). No config class: the generator writes an initializer reading `OTEL_*`, and nothing covers the error tracker (§4, §7). Generator re-run relies on Thor's conflict prompt (§5). No `partitia.services` (§9) |
 | tenanted | Not isolated (by design: `tenants` routes drawn into the host). Install writes `database.yml` with `force: true` (§5); writes controllers and an initializer unguarded (§5). Views are ERB (§8). No config class: module accessors only (§4). `views` generator offers `accounts`, which the gem doesn't have, and rejects `tenant_not_found`, which its own template tells you to run |
 | iam | Install writes only a commented initializer; its credentials key says `iam:` instead of `partitia_iam:` (§4). Layout is ERB (§8). `lockbox` declared but unused (§2) |
 | cognito | Not registered (§3). Install writes the initializer unguarded, doesn't filter `code`/`state` from logs and doesn't print the login path (§5). The dummy's Authentik harness is its own docker compose (Authentik 2024.10.5) instead of pcm's `stack/authentik` (§4, §9). No `partitia.services` |
