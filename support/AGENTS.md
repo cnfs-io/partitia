@@ -1,12 +1,9 @@
-# CLAUDE.md — partitia-support
+# AGENTS.md — partitia-support
 
-Guidance for Claude Code working **inside `partitia-support`**.
+Guidance for agents working **inside `partitia-support`**.
 
-Read `../CLAUDE.md` (partitia-* family conventions) first, and above it the workspace
-`../../CLAUDE.md` (map + how-we-work). Those carry the shared lifecycle rules, the
-partitia-* conventions (string vocabulary fields, i18n, secrets, dependency
-inversion), the skills, and the stack. This file carries only what is specific to
-`partitia-support`.
+Read `../AGENTS.md` (the repo) first, and `../ARCHITECTURE.md` (the layers and the engine
+contract). This file carries only what is specific to `partitia-support`.
 
 When writing or updating this gem's `README.md`, follow the **readme-authoring**
 skill; for its config/logging/telemetry primitives follow the matching skills —
@@ -30,10 +27,10 @@ deliberately refuses to depend on.
 
 ## Where the plans live
 
-`partitia-support` carries **no gem-local `doc/plans`** — its build work rides the
-cross-gem, space-level plans in `../../doc/plans` (e.g. `005-diagnostic-logging`,
-`006-config-adoption`, `008-telemetry-enrichment-dashboards`). `progress.md` here
-is the append-only completion log. Read the space plans, not gem-local ones.
+`partitia-support` carries **no gem-local `doc/plans`**. What it was built from is in the
+archived space-level plans (`../../doc/archive/plans`: `005-diagnostic-logging`,
+`006-config-adoption`, `008-telemetry-enrichment-dashboards`); new work comes from
+`../ROADMAP.md`. `progress.md` here is the append-only completion log.
 
 ## Testing
 
@@ -123,11 +120,11 @@ how a later session would know the claim stopped being true.
 ### coherence of docs ↔ plans
 
 - [medium] This gem holds **no gem-local `doc/plans`** — its build is driven by
-  the space-level cross-gem plans in `../../doc/plans`, and `progress.md` is the
+  the space-level cross-gem plans (now archived in `../../doc/archive/plans`), and `progress.md` is the
   completion log. Every plan reference in `progress.md` resolves to a real file
-  under `../../doc/plans`; no doc references a deleted file or a superseded rule.
+  under `../../doc/archive/plans`; no doc references a deleted file or a superseded rule.
   referent: `doc/` here has no `plans/`; grep of `progress.md`'s plan refs
-  (`003`/`006`/`008`) resolves under `../../doc/plans`; README tag examples match
+  (`003`/`006`/`008`) resolves under `../../doc/archive/plans`; README tag examples match
   the actual `component_tag` output (`partitia_okf`, not `okf`).
 
 ### features in flux (provisional — not scored)
@@ -137,4 +134,4 @@ how a later session would know the claim stopped being true.
   yet **reads** it — the enrichment/redaction guards that consume
   `sensitive_fields` land in plan 008. Until then, any claim that PII is actually
   redacted at emission is PROVISIONAL; today the gem only publishes the list.
-  tracking: `../../doc/plans/008-telemetry-enrichment-dashboards.md`
+  tracking: `../../doc/archive/plans/008-telemetry-enrichment-dashboards.md`
