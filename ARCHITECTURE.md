@@ -153,11 +153,11 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 | Engine | Gaps |
 |---|---|
 | support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
-| dev | Exempt from §3–§6 and §9 (Q1). Has specs now. `require "pry-byebug"` runs whenever the gem loads, not only in the console; no public `Partitia::Dev.reset!` |
+| dev | Exempt from §3–§6 and §9 (Q1). Has specs now. No public `Partitia::Dev.reset!` |
 | telemetry | Not yet installed into a fresh app (D3). The GlitchTip DSN is a manual step until pcm provisions GlitchTip (D4) |
-| tenanted | Views are ERB (§8, D5). `db:migrate:global` is in the `db:` namespace, not `partitia:tenanted:` (§1). `config.partitia_tenanted.trace` is an observability setting that may belong in telemetry's config (§4, Q2). Migration status also lists activerecord-tenanted's `development-tenant` template database |
-| iam | Layout is ERB (§8, D5). README is the Rails stub, so the integrations list (§2) is missing |
-| cognito | When the IdP is unreachable, `/auth/login` is a bare 500 (`ECONNREFUSED`); it should be a clear "identity provider unavailable" page (503). Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |
+| tenanted | Views are ERB (§8, D5). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. `config.partitia_tenanted.trace` is an observability setting that may belong in telemetry's config (§4, Q2). Migration status also lists activerecord-tenanted's `development-tenant` template database |
+| iam | Layout is ERB (§8, D5). README is otherwise the Rails stub (its Integrations section, §2, is written) |
+| cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |
 | ui | Shelved. No install generator (§5): `partitia:ui:install` is where D5's app setup (Phlex/RubyUI namespaces, the host's `app/components/ruby_ui`, tokens) belongs |
 
 ## Wiring an app today

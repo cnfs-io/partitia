@@ -94,8 +94,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       test DB
 - [x] The gaps table in `ARCHITECTURE.md`, engine by engine; what is left there is small or
       belongs to D5 (ERB views, ui's installer)
-- [ ] Small follow-ups from that table: cognito's unreachable-IdP 500; tenanted's
-      `db:migrate:global` naming and `trace` setting; dev's unconditional `pry-byebug` require
+- [x] Small follow-ups from that table: cognito's unreachable IdP is a 503 (was a 500); dev
+      loads `pry-byebug` only with the console; iam's README lists its integrations
+- [ ] tenanted's `trace` setting (may belong in telemetry's config, Q2)
 - [x] tenanted: migration status for tenant databases: `partitia:tenanted:migrate:status`
 
 **What an agent needs to know (D3):**
