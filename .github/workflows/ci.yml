@@ -5,25 +5,20 @@ on:
   push:
     branches: [ main ]
 
+env:
+  RUBY_VERSION: ruby-4.0.7
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { gem: cognito,   ruby: ruby-4.0.4 }
-          - { gem: dev,       ruby: ruby-4.0.4 }
-          - { gem: iam,       ruby: ruby-4.0.4 }
-          - { gem: support,   ruby: ruby-4.0.4 }
-          - { gem: telemetry, ruby: ruby-4.0.4 }
-          - { gem: tenanted,  ruby: ruby-4.0.4 }
-          - { gem: ui,        ruby: ruby-4.0.5 }
+        gem: [ cognito, dev, iam, support, telemetry, tenanted, ui ]
     defaults:
       run:
         working-directory: ${{ matrix.gem }}
     env:
-      RUBY_VERSION: ${{ matrix.ruby }}
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
       - name: Checkout code
@@ -48,3 +43,31 @@ jobs:
 
       - name: Lint code for consistent style
         run: bin/rubocop -f github
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gem: [ cognito, dev, iam, support, telemetry, tenanted, ui ]
+    defaults:
+      run:
+        working-directory: ${{ matrix.gem }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: ${{ matrix.gem }}
+
+      - name: Run specs
+        run: |
+          if [ -d spec ]; then
+            bundle exec rspec
+          else
+            echo "::notice::${{ matrix.gem }} has no specs yet"
+          fi

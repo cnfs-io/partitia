@@ -16,4 +16,3 @@ Rails.autoloaders.main.push_dir(
 # Allow using RubyUI::ComponentName instead RubyUI::ComponentName::ComponentName
 # Rails.autoloaders.main.collapse(Rails.root.join("app/components/ruby_ui/*"))
 Rails.autoloaders.main.collapse(Partitia::Ui::Engine.root.join("app/components/ruby_ui/*"))
-

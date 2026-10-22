@@ -56,7 +56,7 @@ module Partitia
         token = OpenTelemetry::Context.attach(
           OpenTelemetry::Trace.context_with_span(span)
         )
-        stack_for(id).push([span, token])
+        stack_for(id).push([ span, token ])
       end
 
       def finish(name, id, payload)

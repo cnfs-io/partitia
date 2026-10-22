@@ -12,6 +12,7 @@ Gem::Specification.new do |spec|
                     "API only — no SDK, no exporters. Stays a no-op until a host app " \
                     "installs and configures the SDK (via the install generator)."
   spec.license     = "MIT"
+  spec.required_ruby_version = ">= 3.2"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the "allowed_push_host"
   # to allow pushing to a single host or delete this section to allow pushing to any host.

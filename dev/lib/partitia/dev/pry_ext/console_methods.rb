@@ -187,11 +187,11 @@ module Partitia
 
           define_console_method(name) do |*args|
             memo = shortcut_memo
-            memo.key?([key, *args]) ? memo[[key, *args]] : (memo[[key, *args]] = fetch.call(*args))
+            memo.key?([ key, *args ]) ? memo[[ key, *args ]] : (memo[[ key, *args ]] = fetch.call(*args))
           end
 
           define_console_method("#{name}!") do |*args|
-            shortcut_memo[[key, *args]] = fetch.call(*args)
+            shortcut_memo[[ key, *args ]] = fetch.call(*args)
           end
         end
 

@@ -58,8 +58,8 @@ module Partitia
 
         # Types that may appear in serialized attributes.
         def yaml_permitted_classes
-          [Symbol, Time, Date, DateTime, ActiveSupport::TimeWithZone,
-           ActiveSupport::TimeZone, BigDecimal]
+          [ Symbol, Time, Date, DateTime, ActiveSupport::TimeWithZone,
+           ActiveSupport::TimeZone, BigDecimal ]
         end
       end
     end
