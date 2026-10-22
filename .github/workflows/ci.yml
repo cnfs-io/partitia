@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gem: [ chatter, cognito, dev, iam, support, telemetry, tenanted ]
+    defaults:
+      run:
+        working-directory: ${{ matrix.gem }}
+    env:
+      RUBY_VERSION: ruby-4.0.4
+      RUBOCOP_CACHE_ROOT: tmp/rubocop
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+          working-directory: ${{ matrix.gem }}
+
+      - name: Prepare RuboCop cache
+        uses: actions/cache@v4
+        env:
+          DEPENDENCIES_HASH: ${{ hashFiles(format('{0}/.rubocop.yml', matrix.gem), format('{0}/.rubocop_todo.yml', matrix.gem), format('{0}/Gemfile.lock', matrix.gem)) }}
+        with:
+          path: ${{ matrix.gem }}/${{ env.RUBOCOP_CACHE_ROOT }}
+          key: rubocop-${{ matrix.gem }}-${{ runner.os }}-${{ env.RUBY_VERSION }}-${{ env.DEPENDENCIES_HASH }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
+          restore-keys: |
+            rubocop-${{ matrix.gem }}-${{ runner.os }}-${{ env.RUBY_VERSION }}-${{ env.DEPENDENCIES_HASH }}-
+
+      - name: Lint code for consistent style
+        run: bin/rubocop -f github
