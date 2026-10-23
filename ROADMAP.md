@@ -333,6 +333,34 @@ SQLite, or Postgres), the deploy target (Kamal, or RWS), and the secrets path (f
 The ~45 files across chatter, chorus, gtd, micro_manager and okf still on the old names (see
 "Outside this repo"), brought onto the partitia engines and contract.
 
+## Services — the plumbing apps still build themselves
+
+Gaps in "common functionality for free" (2026-10-22), most important first. Scheduled after the
+pause; each becomes an engine or a feature of an existing one under the contract. Where a pcm
+service is needed, the container is built in stack (pcm-containers skill), and only missing pcm
+capabilities go to anfs as `anfs report` feature requests.
+
+- [ ] **S1 Authorization:** roles and permissions beyond root (iam has a sign-in gate only):
+      a policy model per account/tenant, checked in controllers and views, with URNs as subjects
+      and resources
+- [ ] **S2 Invitations and email:** invite a user to an account or tenant (invite_only is the
+      default and the bootstrap link is the only way in today); a mailer setup and a dev mail
+      catcher (pcm Mailpit, `pt services`)
+- [ ] **S3 Background jobs:** ActiveJob/Solid Queue with the tenant carried into the job (runs
+      in the tenant's database) and the trace linked to the request that enqueued it
+- [ ] **S4 Audit log:** who did what to which URN, from the `partitia_*` event stream; per
+      tenant, queryable
+- [ ] **S5 API access:** per-tenant tokens for machine clients (service accounts), scopes, rate
+      limiting
+- [ ] **S6 Logs and metrics:** structured logs with trace_id/span_id, request metrics; Loki (and
+      maybe Prometheus/Mimir) in pcm's telemetry stack, with Grafana datasources
+- [ ] **S7 File storage per tenant:** ActiveStorage with tenant-separated keys; an S3-compatible
+      pcm service (e.g. Garage or MinIO)
+- [ ] **S8 Tenant data lifecycle:** export, deletion (GDPR) and backup per tenant (one database
+      per tenant makes this cheap)
+
+Left to apps: feature flags, billing.
+
 ## D9 — UI: Phlex and RubyUI
 
 Last, on purpose: it has the most long-term design implications. Open before it starts: its
