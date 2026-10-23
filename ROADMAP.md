@@ -317,6 +317,23 @@ in Authentik since, use yours.
   global database and every sign-in callback was a 500 (`Could not find table
   'partitia_iam_identity_links'`) until the server restarted.
 
+Found while drawing DIAGRAMS.md (2026-10-22), small, after the pause:
+
+- [ ] ARCHITECTURE §4: the real anyway_config order includes `config/<name>.local.yml` (dev,
+      flat; `pt services` relies on it) and `config/credentials/local.yml.enc`; the ejson and
+      doppler loaders would override ENV when present: decide whether `Partitia::Support::Config`
+      disables them
+- [ ] ARCHITECTURE §6 says the platform database holds identity only, but it gets every tenant
+      migration (host tables too); only `with_platform`'s scope guard limits it. Fix the doc or
+      the migrations
+- [ ] tenanted's Engine body replaces support's `migrations_paths_for` at load time (a multi app
+      has no `:primary` scope); works only because it runs at `Bundler.require`. Make it an
+      explicit registration
+- [ ] The provisioning-time bootstrap token is only in memory (`TenantSeeder.last_bootstrap_token`,
+      racy), so the first sign-in always needs `partitia:iam:bootstrap`: drop it or persist it
+- [ ] Stale comments: tenanted `install.rake` (a hard-coded `db/global_migrate` line), iam's engine
+      (`[:primary]`; it is `[:tenant]` in a multi app)
+
 ## Pause — the person reviews
 
 After D6: the person reviews and pushes every repo (the first CI run on the new layout), then
