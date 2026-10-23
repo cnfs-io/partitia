@@ -45,8 +45,8 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       DSN out of the secrets store)
 - [x] `smoke [app]` — the D6 acceptance as a command. Cheap first: `/up` 200, `/auth/login` 302 to
       Authentik, a forced error lands in GlitchTip, a trace in Tempo (curl + `pcm exec`); CHECK
-      STATUS DETAIL, exit 1 on failure, about 35 s. A real headless login as the bootstrap admin
-      is later
+      STATUS DETAIL, exit 1 on failure, about 35 s. `--login` (D6) adds a real headless sign-in
+      as Authentik's bootstrap admin (`--host acme.localhost` on a tenant)
 - [x] `ci [gem...]` — what CI runs (Ruby and gem matrix from `.github/workflows/ci.yml`), in
       pcm's `ruby-ci` job container via `pcm run`: fresh clone, frozen bundle, rspec, rubocop;
       a GEM STATUS SPECS LINT table, exit 1 on failure. Gems are cached per Ruby, so a warm run
@@ -122,9 +122,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       `PARTITIA_TELEMETRY_RACK_TRACING=false`); the `partitia_*` spans are their children
 - [x] errors: `sentry-rails` to `stack/glitchtip`, including `Rails.error.report` (the generated
       `sentry.rb` sets `register_error_subscriber`, off in sentry-rails)
-- [ ] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
+- [x] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
       wizard). `pt services` provisions it and `/auth/login` redirects to it with the client
-      (`pt smoke`); a real sign-in through it is not proven yet (D6)
+      (`pt smoke`); a real sign-in through it is proven in D6 (`pt smoke --login`)
 - [x] `pt services`: provisions each installed engine's services through pcm's public commands
       only (`pcm provision`/`deprovision`, pcm 0.3.0); never commits a secret.
       - Non-secrets (issuer, client_id) are deterministic for pcm and already written by the
@@ -223,15 +223,79 @@ not (that is D9).
 
 ## D6 — The demo
 
-- [ ] `single`: `pt new single` → `pt server` → Authentik login, a trace in Grafana, an error in
-      GlitchTip; scripted as `pt smoke`
-- [ ] `multi`: tenant from subdomain (`*.localhost`); Authentik accepts every tenant through one
-      regex redirect (`redirect_regex=` on the authentik hook, e.g.
-      `http://[a-z0-9-]+\.localhost:3000/auth/callback`), each tenant keeping its own session.
-      Production custom domains: later
+- [x] `single`: `pt new single` → `pt services` → `pt server` → Authentik sign-in, a trace in
+      Grafana, an error in GlitchTip; scripted as `pt smoke --login` (curl, headless, as akadmin)
+- [x] `multi`: tenant from subdomain (`*.localhost`); Authentik accepts every tenant through one
+      regex redirect (`redirect_regex=` on the authentik hook, stack authentik 0.3.0;
+      `pt services` adds `http://[a-z0-9-]+\.localhost:<port>/auth/callback` beside the strict
+      apex one), each tenant keeping its own session (host-only cookie) and principals (its own
+      database). Production custom domains: later
+- [x] First sign-in with the fail-closed default: root claims itself with its bootstrap link token
+      (`bin/rails partitia:iam:bootstrap [TENANT=<subdomain>]`); `/me` is the check page
+- [ ] **The person signs in via browser** (the checklist below)
+- [ ] Sign-in on a multi-tenant app's apex or an unknown subdomain: `/auth/login` still goes to
+      Authentik and the callback is a 500 (`NoTenantError`: no identity plane there). The apex is
+      the platform's (the dummy's `platform_auth` entry point); an unknown subdomain should go
+      to `/tenant-unknown` before the IdP
 
 - [ ] One control for request tracing: tenanted's `config.partitia_tenanted.trace` request span
       folds into telemetry's `rack_tracing` (tenanted adds tenant attributes to the request span)
+
+**Browser check (the person).** Authentik's admin is `akadmin`; its password is
+`AUTHENTIK_BOOTSTRAP_PASSWORD` in `~/.config/pcm/containers/authentik/local.env` if you set it
+there, else that variable's default in the authentik definition's `.env.schema`
+(`pcm path authentik`). Authentik reads it on its first start only: if you changed the password
+in Authentik since, use yours.
+
+1. [ ] `pcm up telemetry`; `pt new single demo1 && pt services && pt server` (port 3000; another
+       port: `PARTITIA_PORT=<port>` for both `pt services` and `pt server`)
+2. [ ] In the app: `bin/rails partitia:iam:bootstrap` prints `ROOT=unclaimed` and
+       `LINK_TOKEN=<token>`
+3. [ ] Open `http://localhost:3000/auth/login?link_token=<token>`: Authentik's sign-in page;
+       sign in as `akadmin`
+4. [ ] You land on <http://localhost:3000/me>: "Signed in", the root principal (`owner@demo1.test`,
+       `urn:partitia:iam::<account>:user/1 (root)`), database `storage/development.sqlite3`
+5. [ ] Sign out (the button), then <http://localhost:3000/me> again: it goes to Authentik and back
+       with no token (Authentik remembers you; root is claimed: the task now prints
+       `ROOT=claimed`)
+6. [ ] Multi: `pt new multi demo2 && pt services && pt server`, then
+       `bin/rails partitia:iam:bootstrap TENANT=acme` and
+       `http://acme.localhost:3000/auth/login?link_token=<token>`: `/me` on `acme.localhost`,
+       root `owner@acme.test`, database `storage/development/<acme's handle>.sqlite3`
+7. [ ] Still in demo2: <http://localhost:3000/me> on the apex is not signed in (sessions are per
+       host; it sends you to sign in, which fails there: the open item above), and
+       <http://bogus.localhost:3000/me> goes to `/tenant-unknown`
+
+**What an agent needs to know (D6):**
+- First sign-in: cognito fails closed (`:invite_only`; its installer no longer sets `:jit`). Each
+  database has one root principal; `bin/rails partitia:iam:bootstrap` (iam,
+  `Partitia::Iam::Bootstrap`) seeds it where nothing did (a single-tenant app) and, while root
+  has no identity link, issues a new single-use link token (stdout `ROOT=`, `LINK_TOKEN=`). The
+  first sign-in with `/auth/login?link_token=` binds that IdP identity to root. Each run while
+  unclaimed invalidates the previous token. Multi: `TENANT=<subdomain>` (or `platform`); tenants
+  are seeded on creation.
+- Tenant sign-in needs no app wiring: tenanted selects the database at the Rack layer
+  (`Partitia::Tenanted.request_handle` given to activerecord-tenanted's middleware), so cognito's
+  mounted callback runs in the tenant's database. The dummy's `identity.rb` only adds the
+  platform flag on top.
+- Authentik's ID token `iss` ends in `/`; cognito compared it with the slash trimmed and refused
+  every real sign-in (its specs used an issuer without one). Now `iss` must equal the configured
+  issuer exactly. The live discovery spec (`spec/integration`) passes against pcm's Authentik.
+- Headless sign-in: `/auth/login` → Authentik's authorize → `/if/flow/<slug>/?<query>`; drive it
+  through `GET/POST /api/v3/flows/executor/<slug>/?query=<that query, encoded>` with one cookie
+  jar: `ak-stage-identification` (`uid_field`), `ak-stage-password` (`password`, on stdin), then
+  `xak-flow-redirect` back to authorize, which (implicit consent) redirects to the app's
+  callback. No CSRF header is needed. `pt smoke --login` does exactly this.
+- The bootstrap admin's password is in the running container's environment:
+  `pcm exec -s server authentik -- printenv AUTHENTIK_BOOTSTRAP_PASSWORD` (into a variable, never
+  echoed).
+- Authentik `fullmatch`es regex redirect URIs; the hook still stores `^(?:…)$`. A `redirect_uri`
+  that matches nothing (another port or host) is a 400 "Redirect URI Error" at authorize.
+- `/me` (from the template, app-owned, tiny ERB until D9) is where cognito lands after sign-in
+  (`after_sign_in_path`); it shows the principal and the database it was read from.
+- `curl` 8.x resolves `*.localhost` to loopback by itself; no `--resolve` needed.
+- Don't edit `partitia` while a `pt` command runs: bash reads the script as it goes (a `pt new`
+  died after `rails new` finished when the file changed under it).
 
 ## Pause — the person reviews
 

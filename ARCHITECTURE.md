@@ -157,7 +157,7 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 | telemetry | None (D4 done): installed into fresh apps; `pt services` provisions GlitchTip and stores the DSN; traces and errors proven end to end (`pt smoke`) |
 | tenanted | Views are ERB (§8, D9). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. `config.partitia_tenanted.trace` is an observability setting that may belong in telemetry's config (§4, Q2). Migration status also lists activerecord-tenanted's `development-tenant` template database |
 | iam | Layout is ERB (§8, D9). README is otherwise the Rails stub (its Integrations section, §2, is written) |
-| cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). The live Authentik spec has not run against pcm's Authentik |
+| cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). |
 | ui | Shelved. No install generator (§5): `partitia:ui:install` is where D9's app setup (Phlex/RubyUI namespaces, the host's `app/components/ruby_ui`, tokens) belongs |
 
 ## Wiring an app today
@@ -180,9 +180,11 @@ still stock (it writes the global and tenant planes; support's installer then fi
 wired), then the others as above; `db:prepare`; `Partitia::Tenanted.provision_platform!`, then a
 `Tenant` per tenant (iam seeds each tenant's account and root on creation). `acme.localhost`
 runs in acme's database; an unknown subdomain redirects to `/tenant-unknown`; `/tenants`
-answers 403 until `platform_console_guard` is set. Signing in on a tenant's subdomain needs
-the wiring in `tenanted/spec/dummy/config/initializers/identity.rb` (the callback must run in
-the tenant's database), which D6 settles.
+answers 403 until `platform_console_guard` is set. Signing in on a tenant's subdomain needs no
+wiring: tenanted selects the tenant's database at the Rack layer, so cognito's callback runs
+there (D6). The first sign-in in any database is root's, with its bootstrap link token
+(`bin/rails partitia:iam:bootstrap [TENANT=<subdomain>]`); the template's `/me` shows who is
+signed in.
 
 ## Decisions (2026-10-22)
 
