@@ -371,7 +371,7 @@ from both. Two repos, under `~/spaces/cnfs/apps/` (GitHub `cnfs-io/testbed`, `cn
 
 anfs is building generic infrastructure tooling (EC2, a local Proxmox VM, containers, later
 k3s), which cnfs will use the way it uses pcm today. partitia's side: what an app needs from it
-(see the conversation of 2026-10-22, filed to anfs as requirements input).
+(filed to anfs as requirements input, r-20261022-7).
 
 Not designed yet. The choices that touch the engines: the production database (tenanted on
 SQLite, or Postgres), the deploy target (Kamal, or RWS), and the secrets path (fnox and
