@@ -69,10 +69,18 @@ are registered by the engine; the app adds nothing for them.
    `Partitia::Tenanted::Tenant.create!(name: "Acme", subdomain: "acme", owner_email: "owner@acme.test")`,
    then visit `http://acme.localhost:3000`.
 
-With partitia-iam and partitia-cognito the guard, identity resolver and a Rack
-tenant resolver (so mounted engines such as `/auth` run in the tenant's
-database) go in one initializer; `spec/dummy/config/initializers/identity.rb`
-in this repo is the reference.
+The tenant's database is selected at the Rack layer (activerecord-tenanted's
+middleware, given `Partitia::Tenanted.request_handle`: the resolver, then the
+`Tenant` lookup to its handle), so mounted engines such as partitia-cognito's
+`/auth` run in the tenant's database with no app wiring: a sign-in on
+`acme.localhost` lands in acme's database. A blank or unknown subdomain runs
+untenanted, and the app's own routes redirect it to `/tenant-unknown`.
+
+With partitia-iam, each tenant's root principal is seeded on creation with a
+bootstrap link token; `bin/rails partitia:iam:bootstrap TENANT=<subdomain>`
+issues a fresh one for the first sign-in (partitia-iam's README). The console
+guard is still the app's to set; `spec/dummy/config/initializers/identity.rb`
+in this repo is a reference for it.
 
 ## Migrations
 

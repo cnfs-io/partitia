@@ -43,6 +43,7 @@ module TenancyHelpers
     Partitia::Tenanted.tenant_not_found_handler = nil
     Partitia::Tenanted.platform_console_guard = nil
     Partitia::Tenanted.platform_table_prefixes = nil
+    Partitia::Tenanted.tenant_resolver = nil
   end
 end
 

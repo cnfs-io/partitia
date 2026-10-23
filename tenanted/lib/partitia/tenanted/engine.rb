@@ -43,18 +43,22 @@ module Partitia
         end
       end
 
-      # Defer Rack-level tenant selection to the TenantResolution concern.
+      # Select the tenant's database at the Rack layer, before any controller.
       #
       # activerecord-tenanted auto-inserts its TenantSelector middleware (whenever
-      # connection_class is set) and, by default, resolves a tenant by RAW
-      # SUBDOMAIN and switches to a database of that name. Our databases are keyed
-      # by the opaque, immutable HANDLE (ADR 0002 §5), and the subdomain->handle
-      # step needs a Tenant lookup that a pure request resolver cannot do. So we
-      # neutralize the middleware's resolver (it then runs every request
-      # untenanted) and let Partitia::Tenanted::TenantResolution do the lookup, switch
-      # to with_tenant(handle), and own the not-found seam.
-      initializer "partitia_tenanted.defer_tenant_selection" do |app|
-        app.config.active_record_tenanted.tenant_resolver = ->(_request) { nil }
+      # connection_class is set). By default it resolves a tenant by RAW SUBDOMAIN;
+      # our databases are keyed by the opaque, immutable HANDLE (ADR 0002 §5), so
+      # the middleware gets Partitia::Tenanted.request_handle: the app's resolver
+      # (subdomain by default), then the Tenant lookup to its handle. A blank or
+      # unknown name is nil: the request runs untenanted and the TenantResolution
+      # concern owns the not-found seam for the app's own routes.
+      #
+      # At the Rack layer because mounted engines don't inherit the host's
+      # ApplicationController: cognito's OIDC callback (/auth/callback) has to run
+      # in the tenant's database for the sign-in to land there (D6). The concern's
+      # with_tenant on the same handle is then a no-op.
+      initializer "partitia_tenanted.rack_tenant_selection" do |app|
+        app.config.active_record_tenanted.tenant_resolver = ->(request) { Partitia::Tenanted.request_handle(request) }
       end
 
       # Opt-in request-level tracing. Off by default; the host enables it with

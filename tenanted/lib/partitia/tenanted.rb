@@ -73,6 +73,16 @@ module Partitia
         @tenant_resolver ||= Resolvers.default
       end
 
+      # The handle of the tenant a request names, or nil (no name, or no such
+      # Tenant). The Rack-layer resolver (see Engine): the app's tenant_resolver
+      # parses a name, the global registry maps it to the database handle.
+      def request_handle(request)
+        name = tenant_resolver.call(request)
+        return nil if name.blank?
+
+        Tenant.find_by(subdomain: name)&.handle
+      end
+
       # The ordered after_provision registry (ADR 0003 §6): callables run inside
       # the freshly provisioned database's tenant context, each receiving the
       # provisioning context (an object responding to #name and #owner_email — a

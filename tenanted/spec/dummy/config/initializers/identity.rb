@@ -3,28 +3,20 @@
 # documents the whole seam in one place.
 
 # --- Tenant selection at the Rack layer -------------------------------------
-# partitia-tenanted defaults to resolving the tenant in its controller concern
-# (Plan 001), but the broker's OIDC callback runs in a MOUNTED engine that does
-# not inherit the host ApplicationController — so tenant context must be
-# established earlier, at the Rack layer, to cover host routes AND mounted
-# engines uniformly (ADR 0001: DB selection precedes everything). We re-point
-# activerecord-tenanted's TenantSelector middleware at a subdomain -> handle
-# resolver. Unknown/blank subdomains resolve to nil (run untenanted), leaving the
-# concern's not-found seam to handle host routes.
-# Set in after_initialize so it wins over partitia-tenanted's engine-initializer
-# default (which neutralizes the middleware for its own concern-based path,
-# Plan 001). The middleware reads the resolver lazily on the first request, well
-# after this runs.
+# partitia-tenanted selects the tenant's database at the Rack layer itself
+# (Partitia::Tenanted.request_handle, wired by its engine), so mounted engines
+# such as the broker's /auth callback run in the tenant's database with no app
+# wiring. The dummy adds one thing: the platform (App Admin) login flow
+# authenticates AS the platform, so its OIDC round-trip must run in the reserved
+# database. A dedicated entry point sets a session flag (the reserved handle
+# never resolves from a subdomain, ADR 0003 §2). Set in after_initialize so it
+# wins over the engine's default; the middleware reads the resolver lazily on
+# the first request.
 Rails.application.config.after_initialize do
   Rails.application.config.active_record_tenanted.tenant_resolver = ->(request) do
-    # The platform (App Admin) login flow authenticates AS the platform — its
-    # OIDC round-trip must run in the reserved database. A dedicated entry point
-    # sets a session flag (the reserved handle never resolves from a subdomain,
-    # ADR 0003 §2). Otherwise: subdomain -> handle; blank/unknown -> nil.
     next Partitia::Tenanted::RESERVED_HANDLE if request.session[:platform_auth]
 
-    subdomain = Partitia::Tenanted.tenant_resolver.call(request)
-    subdomain && Partitia::Tenanted::Tenant.find_by(subdomain: subdomain)&.handle
+    Partitia::Tenanted.request_handle(request)
   end
 end
 
