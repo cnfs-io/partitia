@@ -481,7 +481,7 @@
     {
       "id": 6,
       "type": "row",
-      "title": "Requests (partitia-tenanted's request span, config.partitia_tenanted.trace = true)",
+      "title": "Requests by tenant (server spans, rack_tracing; tenant.* from partitia-tenanted)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -494,8 +494,8 @@
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Request rate by host",
-      "description": "partitia_tenanted.telemetry_middleware.request per second, by host.",
+      "title": "Request rate by tenant",
+      "description": "Server spans per second, by the tenant.subdomain partitia-tenanted puts on them (none: the apex, or no partitia-tenanted).",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
@@ -514,7 +514,7 @@
             "uid": "tempo"
           },
           "queryType": "traceql",
-          "query": "{resource.service.name=~\"${service:regex}\" && name=\"partitia_tenanted.telemetry_middleware.request\"} | rate() by (span.partitia_tenanted.telemetry_middleware.request.host)",
+          "query": "{resource.service.name=~\"${service:regex}\" && kind=server} | rate() by (span.tenant.subdomain)",
           "metricsQueryType": "range"
         }
       ],
@@ -552,8 +552,8 @@
     {
       "id": 8,
       "type": "timeseries",
-      "title": "Request latency p50 / p95 / p99",
-      "description": "Duration of the outer request span.",
+      "title": "Tenant request latency p50 / p95 / p99",
+      "description": "Duration of the server spans that name a tenant (span.tenant.subdomain set).",
       "datasource": {
         "type": "tempo",
         "uid": "tempo"
@@ -572,7 +572,7 @@
             "uid": "tempo"
           },
           "queryType": "traceql",
-          "query": "{resource.service.name=~\"${service:regex}\" && name=\"partitia_tenanted.telemetry_middleware.request\"} | quantile_over_time(duration, .5, .95, .99)",
+          "query": "{resource.service.name=~\"${service:regex}\" && kind=server && span.tenant.subdomain != nil} | quantile_over_time(duration, .5, .95, .99)",
           "metricsQueryType": "range"
         }
       ],

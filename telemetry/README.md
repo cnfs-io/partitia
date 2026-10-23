@@ -104,6 +104,10 @@ instrumentation:
   no span of its own.
 - **ActionView**: `render_template`/`render_partial`/`render_layout` spans under it.
 
+With partitia-tenanted, the server span also carries `tenant.subdomain` and `tenant.handle`,
+which tenanted sets when it selects the tenant's database at the Rack layer. That is all of
+tenanted's request tracing: `rack_tracing` is the only switch.
+
 The bridge opens each `partitia_*` span in the current OTel context, so an engine's spans
 (`partitia_cognito.sessions_controller.login_start`, …) are children of the request span,
 one trace per request. ActiveRecord is not traced (that would be one span per query); add
@@ -145,8 +149,8 @@ live-store: recent data only, no Prometheus) and filter on a `service.name` vari
 
 - **Partitia / Overview**: span rate, p95 latency, errored spans and spans per service,
   by event name; HTTP requests from the OTel server spans (`rack_tracing`): rate and p95
-  latency by route, and rate by status code; the request span
-  (`partitia_tenanted.telemetry_middleware.request`, with `config.partitia_tenanted.trace`);
+  latency by route, and rate by status code; with partitia-tenanted, request rate by
+  tenant and p50/p95/p99 of tenant requests (the server span's `tenant.subdomain`);
   recent errored and slow traces.
 - **Partitia / Identity**: sign-in outcomes and latency (cognito's callback), login
   starts, IdP calls, token verification and code exchange; iam's identity resolution
@@ -154,6 +158,8 @@ live-store: recent data only, no Prometheus) and filter on a `service.name` vari
 
 An attribute is `<event name>.<payload key>` (`span.partitia_cognito.sessions_controller.callback.outcome`).
 The app's requests have a span when `rack_tracing` is on (the default; see Request tracing).
+partitia-tenanted adds `tenant.subdomain` and `tenant.handle` to it (`span.tenant.subdomain`);
+`rack_tracing` is the one control for request tracing.
 
 ## Configuration
 
