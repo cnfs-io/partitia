@@ -32,7 +32,7 @@ jobs:
           working-directory: ${{ matrix.gem }}
 
       - name: Prepare RuboCop cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         env:
           DEPENDENCIES_HASH: ${{ hashFiles(format('{0}/.rubocop.yml', matrix.gem), format('{0}/.rubocop_todo.yml', matrix.gem), format('{0}/Gemfile.lock', matrix.gem)) }}
         with:
