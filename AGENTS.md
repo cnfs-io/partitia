@@ -7,7 +7,7 @@ Read first:
 
 - `ROADMAP.md` — where this is going, the decisions already made, and per destination what an
   agent needs to know.
-- `ARCHITECTURE.md` — the layers and the engine contract every engine meets.
+- `ARCHITECTURE.md` — the layers and the engine contract every engine meets; `DIAGRAMS.md` pictures them.
 - `<gem>/AGENTS.md` where a gem has one, then its `README.md` and `progress.md`.
 - ADRs: the docs repo beside this one (`../doc/adrs`); `../doc/archive/` is history, not
   maintained.
