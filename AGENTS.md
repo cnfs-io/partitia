@@ -16,6 +16,5 @@ Working here:
 
 - Each gem stands alone: `cd <gem> && bundle exec rspec`, `bin/rubocop`. Siblings resolve
   through Gemfile `path:` entries; from elsewhere through gem-local.
-- Apps and engines are made and run with `partitia` (`pt`): `pt new`, `pt server`,
-  `pt engine new`.
+- Apps and engines are made and run with `cnfs`: `cnfs new`, `cnfs server`, `cnfs engine new`.
 - Commit to main; the person reviews and pushes.

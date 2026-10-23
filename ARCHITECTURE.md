@@ -1,6 +1,6 @@
 # Architecture
 
-**Status: Agreed (2026-10-22).** `pt engine check` (D0) is to enforce the contract below. The
+**Status: Agreed (2026-10-22).** `cnfs engine check` (D0) is to enforce the contract below. The
 decisions behind it, with the evidence from the earlier apps, are at the end.
 
 Partitia is a family of Rails engines that apps compose. Each engine is a gem in this repo
@@ -136,7 +136,7 @@ An engine meets every rule, or the exception is written here with its reason.
 ### 9. Services
 
 - An engine that needs an external service names the pcm service in its gemspec metadata
-  (`spec.metadata["partitia.services"] = "telemetry"`), so `pt services` can start what an app
+  (`spec.metadata["partitia.services"] = "telemetry"`), so `cnfs services` can start what an app
   needs.
 
 ### 10. Tests and CI
@@ -154,7 +154,7 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 |---|---|
 | support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
 | dev | Exempt from §3–§6 and §9 (Q1). Has specs now. No public `Partitia::Dev.reset!` |
-| telemetry | None (D4 done): installed into fresh apps; `pt services` provisions GlitchTip and stores the DSN; traces and errors proven end to end (`pt smoke`) |
+| telemetry | None (D4 done): installed into fresh apps; `cnfs services` provisions GlitchTip and stores the DSN; traces and errors proven end to end (`cnfs smoke`) |
 | tenanted | Views are ERB (§8, D9). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. Migration status also lists activerecord-tenanted's `development-tenant` template database |
 | iam | Layout is ERB (§8, D9). README is otherwise the Rails stub (its Integrations section, §2, is written) |
 | cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). |
@@ -162,9 +162,9 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 
 ## Wiring an app today
 
-`pt new single <name>` or `pt new multi <name>` does all of this (D5): the `partitia` template
-adds the recipe's engines by gem name and runs the steps below; then `pt services` provisions
-Authentik and GlitchTip, `pt server` serves it and `pt smoke` checks it. What follows is what the
+`cnfs new single <name>` or `cnfs new multi <name>` does all of this (D5): the `partitia` template
+adds the recipe's engines by gem name and runs the steps below; then `cnfs services` provisions
+Authentik and GlitchTip, `cnfs server` serves it and `cnfs smoke` checks it. What follows is what the
 template does, for reading or for wiring an existing app by hand. Proven on fresh apps
 (2026-10-22): each generator run twice, the second changing nothing; both databases migrated.
 
@@ -173,7 +173,7 @@ template does, for reading or for wiring an existing app by hand. Proven on fres
 `partitia:telemetry:install`, `partitia:iam:install`, `partitia:cognito:install` (mounts
 `/auth`, writes `config/partitia_cognito.yml`, filters `code`/`state`/`nonce`); `db:prepare`. Each
 prints what is left: production secrets, `include Partitia::Iam::Authenticatable` where
-sign-in is required; `pt services` registers the Authentik client (public, PKCE).
+sign-in is required; `cnfs services` registers the Authentik client (public, PKCE).
 
 **Multi-tenant** (+ tenanted): `partitia:tenanted:install` **first**, while `database.yml` is
 still stock (it writes the global and tenant planes; support's installer then finds them

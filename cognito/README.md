@@ -95,7 +95,7 @@ The first sign-in is root's, with its bootstrap link token
 The callback has to run in the tenant's database. partitia-tenanted selects it at
 the Rack layer (`Partitia::Tenanted.request_handle`), before the mount, so a
 sign-in on `acme.localhost` lands in acme's database with no app wiring. Authentik
-must accept each tenant's callback: `pt services` registers a regex redirect URI
+must accept each tenant's callback: `cnfs services` registers a regex redirect URI
 (`http://[a-z0-9-]+\.localhost:<port>/auth/callback`) beside the apex one.
 
 Where tenanted selected no database there is nothing to sign in to: tenanted adds a

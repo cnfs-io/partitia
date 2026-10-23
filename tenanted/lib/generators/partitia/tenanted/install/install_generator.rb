@@ -32,7 +32,7 @@ module Partitia
         SOLID_DATABASES = %w[cache queue cable].freeze
 
         # A stop (customized database.yml) exits non-zero, so a script running
-        # the generator (pt new, an app template) sees it.
+        # the generator (cnfs new, an app template) sees it.
         def self.exit_on_failure? = true
 
         # 1. database.yml first, so a customized file stops the run before any

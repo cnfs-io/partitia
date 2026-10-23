@@ -12,7 +12,7 @@ except tenanted and ui; `multi`: adds tenanted).
 
 ```mermaid
 flowchart TB
-  host["Host Rails app<br/>(pt new single | multi)"]
+  host["Host Rails app<br/>(cnfs new single | multi)"]
 
   subgraph partitia["partitia gems"]
     support["partitia-support<br/>Config (anyway_config), plugin registry,<br/>migrations_paths, Instrumentable, UrnConfig"]
@@ -72,7 +72,7 @@ Each engine's gemspec declares the pcm services it needs, in `partitia.services`
 - cognito: `authentik`
 - telemetry: `telemetry glitchtip`
 
-`pt services` provisions them.
+`cnfs services` provisions them.
 
 ## 2. Sign-in (OIDC authorization code + PKCE through Authentik)
 
@@ -222,7 +222,7 @@ before support's initializer walks the plugins.
 
 ## 4. Provisioning a tenant
 
-A tenant is created from the console, from seeds (`pt new multi` seeds `acme`), from `/tenants`, or
+A tenant is created from the console, from seeds (`cnfs new multi` seeds `acme`), from `/tenants`, or
 by `Partitia::Tenanted::Tenant.create!`. All of these go through the `after_create` callback below.
 The platform database goes through the same `run_provision`, with a context that has the same
 shape (`#name`, `#owner_email`), so iam seeds both with one code path.
@@ -290,7 +290,7 @@ sequenceDiagram
 
 ## 5. A request through a multi app
 
-This is the middleware stack of a fresh `pt new multi` app, from `bin/rails middleware` (Rails 8.1,
+This is the middleware stack of a fresh `cnfs new multi` app, from `bin/rails middleware` (Rails 8.1,
 development). The stock Rails middlewares are grouped.
 - The OTel server span opens at the very top.
 - tenanted's database selection is the **last** middleware, after cookies, session and flash.
@@ -350,21 +350,21 @@ flowchart TB
 
 ## 6. The developer toolchain
 
-`pt` is `partitia`, a bash CLI in the cnfs anfs source (`packages/rails/home/.local/bin/partitia`).
+`cnfs` is a bash CLI in the cnfs anfs source (`packages/rails/home/.local/bin/cnfs`).
 It drives `rails new` with the templates in `~/.config/rails`, and pcm for the services.
 
-### `pt new [single|multi] <name>`
+### `cnfs new [single|multi] <name>`
 
 ```mermaid
 flowchart TB
-  dev(["pt new multi diag"])
-  cli["partitia: recipe = PARTITIA_APPS_HOME/multi.yml,<br/>else ~/.config/rails/recipes/multi.yml"]
-  rn["PARTITIA_RECIPE=... rails new diag<br/>(railsrc: -m new.rb, which applies main.rb)"]
+  dev(["cnfs new multi diag"])
+  cli["cnfs: recipe = CNFS_APPS_HOME/multi.yml,<br/>else ~/.config/rails/recipes/multi.yml"]
+  rn["CNFS_RECIPE=... rails new diag<br/>(railsrc: -m new.rb, which applies main.rb)"]
   main["main.rb, strict: partitia.yml, then the recipe,<br/>then diag.yml beside the app<br/>templates dev (pry, rspec, ruby-lsp) and partitia, ui off"]
-  pt["partitia.rb<br/>every engine linked by gem-local? (RUBY_LOCAL_GEMS_HOME)<br/>Gemfile: gem partitia-#lt;engine#gt;,<br/>path: partitia_gems/partitia-#lt;engine#gt;<br/>writes partitia.yml, gitignores /config/*.local.yml"]
+  ptrb["partitia.rb<br/>every engine linked by gem-local? (RUBY_LOCAL_GEMS_HOME)<br/>Gemfile: gem partitia-#lt;engine#gt;,<br/>path: partitia_gems/partitia-#lt;engine#gt;<br/>writes partitia.yml, gitignores /config/*.local.yml"]
   bundle["bundle install"]
 
-  dev --> cli --> rn --> main --> pt --> bundle
+  dev --> cli --> rn --> main --> ptrb --> bundle
 
   subgraph after["after_bundle"]
     direction TB
@@ -385,15 +385,15 @@ flowchart TB
 ```
 
 dev has no installer (Q1). In a single app the tenanted and seed steps are skipped. Every
-installer is idempotent, so `pt template apply partitia` in the app runs the same steps again.
+installer is idempotent, so `cnfs template apply partitia` in the app runs the same steps again.
 
-### `pt services`, `pt server`, `pt smoke`
+### `cnfs services`, `cnfs server`, `cnfs smoke`
 
 ```mermaid
 flowchart TB
-  subgraph svc["pt services"]
+  subgraph svc["cnfs services"]
     probe["bin/rails runner -e development<br/>gems with metadata partitia.services,<br/>slug, cognito issuer + client_id, tenanted?"]
-    ak["authentik (partitia-cognito)<br/>pcm provision authentik --as partitia/#lt;slug#gt;<br/>redirect=localhost:3000/auth/callback,<br/>redirect_regex for *.localhost (multi)"]
+    ak["authentik (partitia-cognito)<br/>pcm provision authentik --as cnfs/#lt;slug#gt;<br/>redirect=localhost:3000/auth/callback,<br/>redirect_regex for *.localhost (multi)"]
     gt["glitchtip (partitia-telemetry)<br/>pcm provision glitchtip org=partitia project=#lt;slug#gt;<br/>prints DSN"]
     tel["telemetry (partitia-telemetry)<br/>no hook: GRAFANA_DASHBOARDS_DIR<br/>in pcm's containers/telemetry/local.env"]
     cmp["compare ISSUER, CLIENT_ID with the app's config<br/>(public client: no secret stored)"]
@@ -401,18 +401,18 @@ flowchart TB
     ak --> cmp
   end
 
-  subgraph store["secrets store: PARTITIA_SECRETS_STORE"]
+  subgraph store["secrets store: CNFS_SECRETS_STORE"]
     local["local (default)<br/>config/partitia_telemetry.local.yml<br/>error_dsn, mode 0600, gitignored"]
     fnox["fnox<br/>PARTITIA_TELEMETRY_ERROR_DSN in the app's fnox.toml"]
   end
   gt --> local
   gt -.-> fnox
 
-  server["pt server [port]<br/>first free port from 3000, bind 0.0.0.0<br/>fnox exec -- (when fnox.toml) bin/dev or rails server"]
+  server["cnfs server [port]<br/>first free port from 3000, bind 0.0.0.0<br/>fnox exec -- (when fnox.toml) bin/dev or rails server"]
   local --> server
   fnox --> server
 
-  subgraph smoke["pt smoke"]
+  subgraph smoke["cnfs smoke"]
     up["/up 200"]
     login["/auth/login: 302 to the issuer's host<br/>(multi apex: 404)"]
     full["--login: partitia:iam:bootstrap for LINK_TOKEN,<br/>curl through Authentik's flow as akadmin,<br/>callback, /me shows the principal"]
@@ -424,11 +424,11 @@ flowchart TB
 ```
 
 Options:
-- `pt services --down` deprovisions, and removes `error_dsn` from the store.
-- `pt smoke --login --host acme.localhost` signs in on a tenant. Without `--host`, a multi app's
+- `cnfs services --down` deprovisions, and removes `error_dsn` from the store.
+- `cnfs smoke --login --host acme.localhost` signs in on a tenant. Without `--host`, a multi app's
   apex is checked for its 404.
 
-`pt smoke` boots the app under `fnox exec` the same way `pt server` does. It reads GlitchTip and
+`cnfs smoke` boots the app under `fnox exec` the same way `cnfs server` does. It reads GlitchTip and
 Tempo through `pcm exec`, because Tempo publishes no port.
 
 ## 7. How a setting resolves
@@ -444,7 +444,7 @@ Every `Partitia::Support::Config` subclass resolves the same way:
 flowchart TB
   def["attr_config defaults<br/>(e.g. otlp_endpoint: pcm's collector, port 4318)"]
   yml["config/#lt;name#gt;.yml<br/>ERB, then the current env's section"]
-  lyml["config/#lt;name#gt;.local.yml<br/>development only (use_local_files), merged as is (flat)<br/>gitignored, written by pt services (store local)"]
+  lyml["config/#lt;name#gt;.local.yml<br/>development only (use_local_files), merged as is (flat)<br/>gitignored, written by cnfs services (store local)"]
   cred["credentials[:#lt;name#gt;]<br/>config/credentials.yml.enc"]
   lcred["config/credentials/local.yml.enc<br/>development only"]
   env["ENV #lt;NAME#gt;_*, e.g. PARTITIA_TELEMETRY_ERROR_DSN<br/>nested keys with __, values autocast"]
@@ -454,7 +454,7 @@ flowchart TB
 
   def --> yml --> lyml --> cred --> lcred --> env --> opt --> coerce --> inst
 
-  fnoxx["pt server, pt smoke: fnox exec --<br/>(when the app has fnox.toml)"] -. "puts PARTITIA_* into the process ENV" .-> env
+  fnoxx["cnfs server, cnfs smoke: fnox exec --<br/>(when the app has fnox.toml)"] -. "puts PARTITIA_* into the process ENV" .-> env
   conf["#lt;NAME#gt;_CONF=path"] -. "replaces the yml path" .-> yml
 
   subgraph otel["OTEL_ variables win"]

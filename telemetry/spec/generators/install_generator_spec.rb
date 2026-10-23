@@ -40,7 +40,7 @@ RSpec.describe Partitia::Telemetry::Generators::InstallGenerator do
     )
     expect(read("config/initializers/opentelemetry.rb")).to include("Partitia::Telemetry::Config", "sdk_traces_endpoint")
     expect(read("config/initializers/sentry.rb")).to include("error_reporting?", "Sentry.init")
-    expect(output).to include("pt services", "PARTITIA_TELEMETRY_ERROR_DSN")
+    expect(output).to include("cnfs services", "PARTITIA_TELEMETRY_ERROR_DSN")
   end
 
   # sentry-rails leaves it off: without it Rails.error.report never reaches GlitchTip

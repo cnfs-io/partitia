@@ -202,6 +202,6 @@ The service-side README lives with the stack at `chorus/services/telemetry`.
   block into its configure block (once), prints what it added.
 - The bridge's `start_span` uses the current context, so `partitia_*` spans are
   children of the request span; proven in a spec (Rack + in-memory exporter) and
-  in Tempo from a `pt new single` app.
+  in Tempo from a `cnfs new single` app.
 - Overview dashboard: HTTP request rate / p95 by route, rate by status.
 - Specs 36 → 49.

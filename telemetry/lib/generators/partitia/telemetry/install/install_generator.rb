@@ -103,7 +103,7 @@ module Partitia
               "credentials.partitia_telemetry, PARTITIA_TELEMETRY_*). OTEL_* still wins for the SDK."
           say ""
           say "Still to do:"
-          say "  pt services   (pcm up telemetry; GlitchTip's project, its DSN stored as error_dsn)", :yellow
+          say "  cnfs services   (pcm up telemetry; GlitchTip's project, its DSN stored as error_dsn)", :yellow
           say "  or set PARTITIA_TELEMETRY_ERROR_DSN (or credentials partitia_telemetry.error_dsn) yourself."
           say "  Until then error reporting is off."
           say ""

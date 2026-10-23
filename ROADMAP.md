@@ -3,7 +3,7 @@
 Partitia is the set of Rails engines every CNFS app builds on: support, dev, telemetry, tenanted,
 iam, cognito, ui. Appwork (shared functionality only some apps need) comes later.
 
-**Near-term destination:** `pt new single`, choose engines through the recipe, `pt server` on
+**Near-term destination:** `cnfs new single`, choose engines through the recipe, `cnfs server` on
 0.0.0.0, and the app works against the pcm services: login through Authentik, traces in Grafana,
 errors in GlitchTip. Then the same for `multi` (multi-tenant).
 
@@ -14,7 +14,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
   app's inflections. No Partitia gem defines a top-level constant (tenanted's `Tenant` and
   `GlobalRecord` move under `Partitia::Tenanted`).
 - **Apps are generated, not maintained.** `apps/` holds recipes (`single.yml`, `multi.yml`); the
-  apps themselves are throwaway output of `pt new`. A hand edit to a generated app means a
+  apps themselves are throwaway output of `cnfs new`. A hand edit to a generated app means a
   template or generator is missing something.
 - **UI:** apps use Phlex and RubyUI; no ERB. Engine views are Phlex classes using RubyUI
   components; each engine declares the components it needs and its installer adds them to the
@@ -22,8 +22,8 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
   view code.
 - **Docs:** `doc/` (ADRs, plans 001–012) and the Obsidian notes are a baseline to mine, not to
   bring up to date. New docs start from the code. ADRs 0002–0004 match the code and carry over.
-- **Tooling:** `partitia` (`pt`), an anfs tool in the cnfs source's `rails` package, is how
-  engines and apps are made and run. Generic Rails shell helpers are stack's `rails` package.
+- **Tooling:** `cnfs`, an anfs tool in the cnfs source's `rails` package, is how engines and
+  apps are made and run. Generic Rails shell helpers are stack's `rails` package.
 - **URNs:** the partition is the app's (`Partitia::Support::UrnConfig`,
   `PARTITIA_URN_PARTITION`, default `partitia`), and `find_by_urn` only resolves this app's,
   service's and account's URNs (ADR 0007). Event and span names stay `partitia_*` in every app;
@@ -34,7 +34,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
   README and install generator. Each destination closes with a short "what an agent needs to
   know" note below, so the skills start from what was learned.
 
-## D0 — Tooling: the `partitia` CLI
+## D0 — Tooling: the `cnfs` CLI
+
+D0 built `cnfs` (formerly `partitia`, alias `pt`).
 
 - [x] `new`, `list`, `server` (0.0.0.0 through `bin/dev`), `log`, `engine new`, `template`,
       `path`/`cd`, `config`; bats suite
@@ -102,9 +104,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] tenanted: migration status for tenant databases: `partitia:tenanted:migrate:status`
 
 **What an agent needs to know (D3):**
-- `pt engine check` is the contract's static check; run it after touching an engine.
+- `cnfs engine check` is the contract's static check; run it after touching an engine.
 - Prove an engine in a fresh `rails new` app, not only its dummy: install twice (the second run
-  must leave `git status` clean), `db:prepare`, `pt server`, real requests. Both bugs D3 found
+  must leave `git status` clean), `db:prepare`, `cnfs server`, real requests. Both bugs D3 found
   (support's installer on a tenanted `database.yml`; `*.localhost` never resolving a tenant)
   passed every spec and showed up only there.
 - Install order: `partitia:tenanted:install` before anything that edits `database.yml`.
@@ -123,17 +125,17 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] errors: `sentry-rails` to `stack/glitchtip`, including `Rails.error.report` (the generated
       `sentry.rb` sets `register_error_subscriber`, off in sentry-rails)
 - [x] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
-      wizard). `pt services` provisions it and `/auth/login` redirects to it with the client
-      (`pt smoke`); a real sign-in through it is proven in D6 (`pt smoke --login`)
-- [x] `pt services`: provisions each installed engine's services through pcm's public commands
+      wizard). `cnfs services` provisions it and `/auth/login` redirects to it with the client
+      (`cnfs smoke`); a real sign-in through it is proven in D6 (`cnfs smoke --login`)
+- [x] `cnfs services`: provisions each installed engine's services through pcm's public commands
       only (`pcm provision`/`deprovision`, pcm 0.3.0); never commits a secret.
       - Non-secrets (issuer, client_id) are deterministic for pcm and already written by the
-        installers; `pt services` checks they agree.
-      - Secrets (the DSN; later CLIENT_SECRET) go to a store, `PARTITIA_SECRETS_STORE`:
+        installers; `cnfs services` checks they agree.
+      - Secrets (the DSN; later CLIENT_SECRET) go to a store, `CNFS_SECRETS_STORE`:
         `local` (default): `config/partitia_<engine>.local.yml`, `/config/*.local.yml` gitignored;
         `fnox`: piped to `fnox set` in the app's `fnox.toml` with the space's provider (1Password
         through its service-account token), so fnox exports `PARTITIA_<ENGINE>_*`. Both reach
-        the engines through anyway_config with no engine code; `pt server` runs under
+        the engines through anyway_config with no engine code; `cnfs server` runs under
         `fnox exec` when a `fnox.toml` is present
       - First run points `GRAFANA_DASHBOARDS_DIR` (`~/.config/pcm/env/telemetry.env`) at
         `telemetry/dashboards/` in this repo
@@ -148,11 +150,11 @@ How it is built:
   pcm definition that lists the service in `x-pcm.depends_on`, never by running the script
 - OIDC client type is a setting: `client_type=public|confidential` in the authentik hook and
   in cognito's config. Only `public` (PKCE, no secret) is implemented; `confidential` is
-  rejected with "not yet supported", leaving room for the secret to flow through `pt services`
+  rejected with "not yet supported", leaving room for the secret to flow through `cnfs services`
   into credentials later
 
 **What an agent needs to know (D4):**
-- The loop is `pcm up telemetry` → `pt services` → `pt server` → `pt smoke`. Grafana is
+- The loop is `pcm up telemetry` → `cnfs services` → `cnfs server` → `cnfs smoke`. Grafana is
   <http://localhost:8080> (anonymous); Tempo publishes no port: query it through Grafana's
   datasource proxy (`/api/datasources/proxy/uid/tempo/api/search`) or
   `pcm exec -s grafana telemetry -- wget -qO- http://tempo:3200/...`.
@@ -171,7 +173,7 @@ How it is built:
   TraceQL search queries are not supported". Check metrics panels through `/api/ds/query`,
   search panels through the proxy.
 - The forced error is `Rails.error.report` through `bin/rails runner` (one GlitchTip issue,
-  "pt smoke: a forced error", one event a run). An app made before the `sentry.rb` change lacks
+  "cnfs smoke: a forced error", one event a run). An app made before the `sentry.rb` change lacks
   `register_error_subscriber` and reports nothing that way: add the line, or delete `sentry.rb`
   and re-run `partitia:telemetry:install`.
 - GlitchTip's events for an app: `pcm exec -s web glitchtip -- ./manage.py shell -c ...` with
@@ -181,26 +183,26 @@ How it is built:
 
 Later (longer term):
 
-- [ ] Confidential OIDC clients: the hook generates and prints `CLIENT_SECRET`, `pt services`
+- [ ] Confidential OIDC clients: the hook generates and prints `CLIENT_SECRET`, `cnfs services`
       stores it in the app's credentials, cognito sends it at the token endpoint
 
 ## D5 — Recipes and template
 
-`pt new single|multi` produces a wired app with no manual steps. D6 depends on it; the UI does
+`cnfs new single|multi` produces a wired app with no manual steps. D6 depends on it; the UI does
 not (that is D9).
 
 - [x] Engines by gem name through gem-local, not `~/spikes/chorus` paths; no `binding.pry`
 - [x] The recipe selects engines: `single` and `multi` recipes (`partitia.yml` / `<app>.yml`)
 - [x] `~/.config/rails/templates/cnfs.rb` rewritten as `partitia.rb`: the engines' installers in
       the D3 order (tenanted before anything that edits `database.yml`), then `db:prepare`
-- [x] Proven like D3: a fresh `pt new single` and `pt new multi`, installers re-run with no
-      changes, `pt services`, `pt server`, `pt smoke`
+- [x] Proven like D3: a fresh `cnfs new single` and `cnfs new multi`, installers re-run with no
+      changes, `cnfs services`, `cnfs server`, `cnfs smoke`
 
 **What an agent needs to know (D5):**
-- `pt new <recipe> <name> [rails new options]`; `pt new <name>` alone is a plain `rails new` (plus
-  `<name>.yml` beside it, if any). A recipe is `<recipe>.yml` in `PARTITIA_APPS_HOME`, else the
-  shipped `~/.config/rails/recipes/{single,multi}.yml` (cnfs `rails` package). `pt` hands it to the
-  templates as `PARTITIA_RECIPE`; `lib.rb` merges it over `partitia.yml`, and `<name>.yml` over it.
+- `cnfs new <recipe> <name> [rails new options]`; `cnfs new <name>` alone is a plain `rails new` (plus
+  `<name>.yml` beside it, if any). A recipe is `<recipe>.yml` in `CNFS_APPS_HOME`, else the
+  shipped `~/.config/rails/recipes/{single,multi}.yml` (cnfs `rails` package). `cnfs` hands it to the
+  templates as `CNFS_RECIPE`; `lib.rb` merges it over `partitia.yml`, and `<name>.yml` over it.
 - A recipe is the templates' answers: `templates.partitia.engines` (and `tenants` for the demo
   tenants), every `dev` gem answered, and `ui: false` (a template set to `false` is not applied).
   Any template gem left without an `install:` answer makes `rails new` stop and ask.
@@ -210,24 +212,24 @@ not (that is D9).
   It fails early when an engine is not linked (`gem-local build`). After bundling: the installers
   in D3's order, `db:prepare`, and with tenanted a guarded block in `db/seeds.rb` (platform
   database, then `Tenant` per demo subdomain) and `db:seed`.
-- The app records its recipe in `./partitia.yml` (`recipe:` and the engines); `pt list`'s RECIPE
-  reads it, and `pt template apply partitia` re-runs everything from it. That re-run leaving
+- The app records its recipe in `./partitia.yml` (`recipe:` and the engines); `cnfs list`'s RECIPE
+  reads it, and `cnfs template apply partitia` re-runs everything from it. That re-run leaving
   `git status` clean is the idempotency check.
-- The template adds `/config/*.local.yml` to `.gitignore`, so `pt services` (local store) leaves a
+- The template adds `/config/*.local.yml` to `.gitignore`, so `cnfs services` (local store) leaves a
   fresh app clean.
 - Tenant resolution runs in `ApplicationController`: `/` on a fresh app is Rails' welcome page and
   resolves nothing. Check it with `/tenants`: `acme.localhost` 403 (the console guard, after the
   tenant resolved), an unknown subdomain 302 to `/tenant-unknown`.
-- `pt engine check` with no gems fails on `ui` (no installer: D9); check the recipe's engines by
+- `cnfs engine check` with no gems fails on `ui` (no installer: D9); check the recipe's engines by
   name.
 
 ## D6 — The demo
 
-- [x] `single`: `pt new single` → `pt services` → `pt server` → Authentik sign-in, a trace in
-      Grafana, an error in GlitchTip; scripted as `pt smoke --login` (curl, headless, as akadmin)
+- [x] `single`: `cnfs new single` → `cnfs services` → `cnfs server` → Authentik sign-in, a trace in
+      Grafana, an error in GlitchTip; scripted as `cnfs smoke --login` (curl, headless, as akadmin)
 - [x] `multi`: tenant from subdomain (`*.localhost`); Authentik accepts every tenant through one
       regex redirect (`redirect_regex=` on the authentik hook, stack authentik 0.3.0;
-      `pt services` adds `http://[a-z0-9-]+\.localhost:<port>/auth/callback` beside the strict
+      `cnfs services` adds `http://[a-z0-9-]+\.localhost:<port>/auth/callback` beside the strict
       apex one), each tenant keeping its own session (host-only cookie) and principals (its own
       database). Production custom domains: later
 - [x] First sign-in with the fail-closed default: root claims itself with its bootstrap link token
@@ -250,8 +252,8 @@ there, else that variable's default in the authentik definition's `.env.schema`
 (`pcm path authentik`). Authentik reads it on its first start only: if you changed the password
 in Authentik since, use yours.
 
-1. [ ] `pcm up telemetry`; `pt new single demo1 && pt services && pt server` (port 3000; another
-       port: `PARTITIA_PORT=<port>` for both `pt services` and `pt server`)
+1. [ ] `pcm up telemetry`; `cnfs new single demo1 && cnfs services && cnfs server` (port 3000; another
+       port: `CNFS_PORT=<port>` for both `cnfs services` and `cnfs server`)
 2. [ ] In the app: `bin/rails partitia:iam:bootstrap` prints `ROOT=unclaimed` and
        `LINK_TOKEN=<token>`
 3. [ ] Open `http://localhost:3000/auth/login?link_token=<token>`: Authentik's sign-in page;
@@ -261,7 +263,7 @@ in Authentik since, use yours.
 5. [ ] Sign out (the button), then <http://localhost:3000/me> again: it goes to Authentik and back
        with no token (Authentik remembers you; root is claimed: the task now prints
        `ROOT=claimed`)
-6. [ ] Multi: `pt new multi demo2 && pt services && pt server`, then
+6. [ ] Multi: `cnfs new multi demo2 && cnfs services && cnfs server`, then
        `bin/rails partitia:iam:bootstrap TENANT=acme` and
        `http://acme.localhost:3000/auth/login?link_token=<token>`: `/me` on `acme.localhost`,
        root `owner@acme.test`, database `storage/development/<acme's handle>.sqlite3`
@@ -290,7 +292,7 @@ in Authentik since, use yours.
   through `GET/POST /api/v3/flows/executor/<slug>/?query=<that query, encoded>` with one cookie
   jar: `ak-stage-identification` (`uid_field`), `ak-stage-password` (`password`, on stdin), then
   `xak-flow-redirect` back to authorize, which (implicit consent) redirects to the app's
-  callback. No CSRF header is needed. `pt smoke --login` does exactly this.
+  callback. No CSRF header is needed. `cnfs smoke --login` does exactly this.
 - The bootstrap admin's password is in the running container's environment:
   `pcm exec -s server authentik -- printenv AUTHENTIK_BOOTSTRAP_PASSWORD` (into a variable, never
   echoed).
@@ -299,11 +301,11 @@ in Authentik since, use yours.
 - `/me` (from the template, app-owned, tiny ERB until D9) is where cognito lands after sign-in
   (`after_sign_in_path`); it shows the principal and the database it was read from.
 - `curl` 8.x resolves `*.localhost` to loopback by itself; no `--resolve` needed.
-- Don't edit `partitia` while a `pt` command runs: bash reads the script as it goes (a `pt new`
-  died after `rails new` finished when the file changed under it).
+- Don't edit the `cnfs` script while a `cnfs` command runs: bash reads the script as it goes
+  (a `cnfs new` died after `rails new` finished when the file changed under it).
 - Where tenanted selected no database there is no sign-in: cognito's `before_sign_in` hooks
   (tenanted adds one) run before `/auth/login` and `/auth/callback`. Unknown subdomain:
-  `/tenant-unknown`; apex: 404. `pt smoke` in a multi-tenant app expects that 404 on the apex
+  `/tenant-unknown`; apex: 404. `cnfs smoke` in a multi-tenant app expects that 404 on the apex
   and checks a tenant's redirect with `--host`. The apex stays untenanted on purpose: pinning
   it to the platform database would make the console's `POST /tenants` provision inside
   activerecord-tenanted's shard-swap lock, and the reserved database would answer app queries
@@ -320,7 +322,7 @@ in Authentik since, use yours.
 Found while drawing DIAGRAMS.md (2026-10-22), small, after the pause:
 
 - [ ] ARCHITECTURE §4: the real anyway_config order includes `config/<name>.local.yml` (dev,
-      flat; `pt services` relies on it) and `config/credentials/local.yml.enc`; the ejson and
+      flat; `cnfs services` relies on it) and `config/credentials/local.yml.enc`; the ejson and
       doppler loaders would override ENV when present: decide whether `Partitia::Support::Config`
       disables them
 - [ ] ARCHITECTURE §6 says the platform database holds identity only, but it gets every tenant
@@ -344,25 +346,25 @@ tests by hand. Nothing starts until they say.
 The third layer beside partitia (plumbing) and appwork (business engines): applications composed
 from both. Two repos, under `~/spaces/cnfs/apps/` (GitHub `cnfs-io/testbed`, `cnfs-io/showcase`):
 
-- **testbed**: persisted, regenerable apps (what `pt new` makes today, kept instead of thrown
+- **testbed**: persisted, regenerable apps (what `cnfs new` makes today, kept instead of thrown
   away). A recipe per app (`single`, `multi`, `kitchen-sink` with every engine, product-shaped
   ones like LGAT and RWS), the generated app committed so regenerating after a template or
-  installer change shows its diff, CI per recipe (`pt new`, `engine check`, `pt services`,
-  `pt smoke`) against partitia and appwork at the commits under test. appwork's fresh-app proof
+  installer change shows its diff, CI per recipe (`cnfs new`, `engine check`, `cnfs services`,
+  `cnfs smoke`) against partitia and appwork at the commits under test. appwork's fresh-app proof
   happens here. Its ROADMAP holds flipper and app-level concerns.
 - **showcase**: polished apps that market partitia and appwork to the world. Content after D9.
 
 - [ ] testbed repo: README, AGENTS.md, ROADMAP, `recipes/`, `single` and `multi` generated by
-      `pt new` (made fresh, not carried over from the old `apps/`)
+      `cnfs new` (made fresh, not carried over from the old `apps/`)
 - [ ] showcase repo: README and ROADMAP only
-- [ ] `pt new` finds recipes in the testbed (a recipes path setting) as well as the shipped ones
+- [ ] `cnfs new` finds recipes in the testbed (a recipes path setting) as well as the shipped ones
 - [ ] Engine catalog: gemspec metadata beside `partitia.services`: what an engine needs, its
-      tenancy (single, multi, both), what it provides, which installers it follows; `pt engines`
+      tenancy (single, multi, both), what it provides, which installers it follows; `cnfs engines`
       lists the catalog across partitia and appwork through gem-local
 - [ ] Resolver: a recipe names what was asked for; dependencies and install order come from the
       catalog (replaces `partitia.rb`'s hard-coded D3 order); appwork engines in recipes
-- [ ] Recipe builder: an agent skill over a non-interactive `pt recipe new`: describe the app,
-      get a recipe from the catalog with a reason per engine, confirm, `pt new`
+- [ ] Recipe builder: an agent skill over a non-interactive `cnfs recipe new`: describe the app,
+      get a recipe from the catalog with a reason per engine, confirm, `cnfs new`
 - [ ] Feature flags seam: `Partitia::Support.feature?(name, actor:)`, true unless the app wires
       flipper (actors are URNs); appwork engines gate through it; flipper itself is proven in
       the testbed
@@ -394,7 +396,7 @@ capabilities go to anfs as `anfs report` feature requests.
       and resources
 - [ ] **S2 Invitations and email:** invite a user to an account or tenant (invite_only is the
       default and the bootstrap link is the only way in today); a mailer setup and a dev mail
-      catcher (pcm Mailpit, `pt services`)
+      catcher (pcm Mailpit, `cnfs services`)
 - [ ] **S3 Background jobs:** ActiveJob/Solid Queue with the tenant carried into the job (runs
       in the tenant's database) and the trace linked to the request that enqueued it
 - [ ] **S4 Audit log:** who did what to which URN, from the `partitia_*` event stream; per
@@ -440,24 +442,25 @@ Kept in view, not scheduled:
       examples pending partitia-ui boards); see appwork's ROADMAP
 - [ ] For appwork, in this repo: `Partitia::Support.component_tag` tags events by the first
       namespace segment, so appwork's are `partitia_appwork.*`, not `appwork_<name>.*`
-- [ ] For appwork, in the cnfs CLI: `pt engine check` assumes the `partitia-` prefix (take it from
-      the gemspec); `pt ci` can't bundle a repo whose gems come from gem-local (ruby-ci mounts
-      only the repo)
+- [x] For appwork, in the cnfs CLI: `cnfs engine check` takes the gem prefix from each gem dir's
+      `<dir>/<prefix>-<dir>.gemspec` (was hard-wired to `partitia-`), so it runs on appwork too
+- [ ] For appwork, in the cnfs CLI: `cnfs ci` can't bundle a repo whose gems come from gem-local
+      (ruby-ci mounts only the repo)
 - [ ] Gem distribution: generated apps' and appwork's lockfiles record this machine's gem-local
       path, so CI bundles unfrozen. Decide at the pause: publish to a gem server (pcm gemstash),
       git sources, or keep paths
-- [ ] **Manual test (the person):** `PARTITIA_SECRETS_STORE=fnox pt services` against the real
+- [ ] **Manual test (the person):** `CNFS_SECRETS_STORE=fnox cnfs services` against the real
       1Password vault through the space's service-account token. Only `fnox set --dry-run` and
       local providers have been tested; check the DSN lands in the vault, fnox exports
-      `PARTITIA_TELEMETRY_ERROR_DSN` in the app dir, and `pt server` picks it up
+      `PARTITIA_TELEMETRY_ERROR_DSN` in the app dir, and `cnfs server` picks it up
 - [ ] **What partitia needs from `anfs space setup` / `wsm setup`** (upcoming in anfs; filed as
-      input, anfs r-20261022-4). For a space whose apps use `PARTITIA_SECRETS_STORE=fnox`:
+      input, anfs r-20261022-4). For a space whose apps use `CNFS_SECRETS_STORE=fnox`:
       - a `fnox.toml` at the space root defining a 1Password provider authenticated by the
         space's service-account token (`OP_SERVICE_ACCOUNT_TOKEN`), with a known provider
-        name `pt` can target (`PARTITIA_FNOX_PROVIDER`) and a vault per space
+        name `cnfs` can target (`CNFS_FNOX_PROVIDER`) and a vault per space
       - app dirs below it inherit that provider: an app's own `fnox.toml` (written by
-        `fnox set` from `pt services`) holds only its keys
+        `fnox set` from `cnfs services`) holds only its keys
       - fnox's shell activation on cd, so `bin/rails c`, runners and jobs see the secrets, not
-        only `pt server` (which wraps `fnox exec`)
+        only `cnfs server` (which wraps `fnox exec`)
       - non-interactive operation: with the token set, no 1Password unlock prompt, so agents
         can work in the space

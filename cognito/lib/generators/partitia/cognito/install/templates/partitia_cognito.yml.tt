@@ -14,7 +14,7 @@ development:
   issuer: <%= issuer %>
   # The Authentik provider's Client ID. Set it there to "<%= app_slug %>", or paste yours here.
   client_id: <%= app_slug %>
-  # public: PKCE, no secret (what `pt services` provisions). confidential: also
+  # public: PKCE, no secret (what `cnfs services` provisions). confidential: also
   # sends client_secret from credentials.
   client_type: public
   scopes:

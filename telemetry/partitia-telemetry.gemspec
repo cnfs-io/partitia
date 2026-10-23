@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
 
   # The pcm services this gem talks to (ARCHITECTURE §9): the OTLP collector and
-  # the error tracker. Space-separated pcm service names, read by `pt services`.
+  # the error tracker. Space-separated pcm service names, read by `cnfs services`.
   spec.metadata["partitia.services"] = "telemetry glitchtip"
 
   spec.metadata["homepage_uri"] = spec.homepage

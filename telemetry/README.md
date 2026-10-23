@@ -80,7 +80,7 @@ The generator:
   it is set; otherwise error reporting is off. It subscribes Sentry to the Rails error
   reporter (`config.rails.register_error_subscriber`, off in sentry-rails), so
   `Rails.error.report` and `Rails.error.handle` reach GlitchTip too.
-- prints what is left: `pt services` (provisions GlitchTip's project and stores the
+- prints what is left: `cnfs services` (provisions GlitchTip's project and stores the
   DSN), or setting the DSN yourself.
 
 It is idempotent: a second run adds no gems, leaves both initializers alone (once
@@ -143,7 +143,7 @@ give their URLs.
 ## Dashboards
 
 `dashboards/` holds the Grafana dashboards for the `partitia_*` spans, provisioned by
-pcm's `stack/telemetry` (`pt services` points its `GRAFANA_DASHBOARDS_DIR` here; Grafana
+pcm's `stack/telemetry` (`cnfs services` points its `GRAFANA_DASHBOARDS_DIR` here; Grafana
 rereads the dir every 30 s). Both query Tempo with TraceQL metrics (Tempo 3's
 live-store: recent data only, no Prometheus) and filter on a `service.name` variable:
 
@@ -176,9 +176,9 @@ ascending priority, from `config/partitia_telemetry.yml`, then
 | `prefixes` | `PARTITIA_TELEMETRY_PREFIXES` (comma list) | `partitia` | event-name families the span bridge subscribes to |
 | `rack_tracing` | `PARTITIA_TELEMETRY_RACK_TRACING` | `true` | request spans (Rack, ActionPack, ActionView; see Request tracing). A boolean: `false`, `0`, `no` turn it off |
 
-`pt services` creates the app's GlitchTip project and stores its DSN
+`cnfs services` creates the app's GlitchTip project and stores its DSN
 (`config/partitia_telemetry.local.yml`, gitignored, or fnox with
-`PARTITIA_SECRETS_STORE=fnox`); `pt services --down` removes it again. By hand, get
+`CNFS_SECRETS_STORE=fnox`); `cnfs services --down` removes it again. By hand, get
 it from GlitchTip (an organization and project, then the project's Client Keys) and
 set it with `bin/rails credentials:edit`:
 
