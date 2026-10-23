@@ -21,7 +21,7 @@ flowchart TB
     tenanted["partitia-tenanted<br/>tenant from subdomain, DB per tenant,<br/>platform DB, tenant console"]
     iam["partitia-iam<br/>principals, accounts, identity links,<br/>Resolution, root + bootstrap token"]
     cognito["partitia-cognito<br/>OIDC broker: PKCE, ID-token verification"]
-    ui["partitia-ui<br/>Phlex + RubyUI (shelved until D9)"]
+    ui["partitia-ui<br/>Phlex + RubyUI: operator screens,<br/>default shell (ADR 0008, D9)"]
   end
 
   subgraph ext["key upstream gems"]

@@ -13,7 +13,7 @@ app by its own generator.
 |---|---|---|
 | Base | support, dev, telemetry | What every engine and app uses: config, logging, instrumentation, the plugin registry, console tooling, the bridge to OpenTelemetry |
 | Identity | tenanted, iam, cognito | Who is asking and in which tenant: tenancy (optional), principals and authorization, sign-in through an IdP |
-| Presentation | ui (shelved) | Shared Phlex/RubyUI components, when engines start duplicating view code |
+| Presentation | ui | partitia's only UI (ADR 0008): Phlex + RubyUI operator screens over the core gems' services, their thin controllers, the default shell. Every other engine is headless |
 
 **Dependencies point down or sideways, never up.** Base never depends on identity. support depends
 on no sibling. Within a layer an engine may integrate with another only optionally (below).
@@ -26,7 +26,8 @@ graph BT
   tenanted --> support
   iam --> support
   cognito --> support
-  ui
+  ui --> support
+  ui -. screens over services .-> tenanted
   iam -. optional .-> tenanted
   cognito -. host wires .-> iam
 ```
@@ -123,15 +124,27 @@ An engine meets every rule, or the exception is written here with its reason.
 - Spans and dashboards are named for the code, not the app (ADR 0007): the app is
   `service.name`.
 
-### 8. Views
+### 8. Views (ADR 0008)
 
-- Phlex classes that use RubyUI components; no ERB. The engine lists the RubyUI components it
-  uses, and its installer adds them to the app. The app's Phlex/RubyUI setup (namespaces,
-  `Components::Base`, design tokens) comes from ui's installer (D9), modelled on the earlier
-  `fudge` app. Until that exists (D9) the existing ERB views stay; converting them is
-  D9's, not D3's.
-- Engine controllers inherit the host's `ApplicationController` unless isolation is the point
-  (cognito's broker), which is then stated.
+- **Core engines are headless:** no screens, no layouts, no front-end gem dependencies (turbo,
+  stimulus, importmap, tailwind). Their public surface is their services, query objects,
+  middleware and seams.
+- **Two exceptions, both plumbing:**
+  - protocol flows (cognito's `/auth/login`, `/auth/callback`, `/auth/logout`);
+  - system pages ("workspace unknown", "sign-in unavailable", the apex 404). These are minimal
+    plain HTML from i18n strings with no layout, overridable by the host at the same view path.
+- **Screens live in `partitia-ui`:** Phlex classes using RubyUI components, with thin
+  controllers calling the core's services, mounted only when the app installs it. Keep logic
+  out of components, so a toolkit change touches only the view layer.
+- **Navigation:** engines register navigation items in support's registry (sections per
+  context; label, path, icon, order, `visible_if`) and ship no layouts. partitia-ui's shell
+  renders the registry, and the app's layout uses or replaces the shell.
+- **Looks:** components use semantic design tokens (CSS variables, shadcn names) whose values
+  the app defines.
+- **Engine controllers** inherit the host's `ApplicationController` unless isolation is the
+  point (cognito's broker), which is then stated.
+- **Until the headless cleanup and D9:** tenanted's console and iam's layout are the known
+  exceptions (see below).
 
 ### 9. Services
 
@@ -155,10 +168,10 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 | support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
 | dev | Exempt from §3–§6 and §9 (Q1). Has specs now. No public `Partitia::Dev.reset!` |
 | telemetry | None (D4 done): installed into fresh apps; `cnfs services` provisions GlitchTip and stores the DSN; traces and errors proven end to end (`cnfs smoke`) |
-| tenanted | Views are ERB (§8, D9). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. Migration status also lists activerecord-tenanted's `development-tenant` template database |
-| iam | Layout is ERB (§8, D9). README is otherwise the Rails stub (its Integrations section, §2, is written) |
+| tenanted | Not yet headless (§8, ADR 0008): its tenant console moves to partitia-ui, its system page becomes plain HTML, and tailwindcss-rails goes. `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. Migration status also lists activerecord-tenanted's `development-tenant` template database |
+| iam | Not yet headless (§8, ADR 0008): its layout and front-end dependencies go. README is otherwise the Rails stub (its Integrations section, §2, is written) |
 | cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). |
-| ui | Shelved. No install generator (§5): `partitia:ui:install` is where D9's app setup (Phlex/RubyUI namespaces, the host's `app/components/ruby_ui`, tokens) belongs |
+| ui | partitia-ui (ADR 0008): no install generator yet (§5). D9 adds `partitia:ui:install` (Phlex/RubyUI setup, tokens, `@source`), the shell and the tenant console |
 
 ## Wiring an app today
 

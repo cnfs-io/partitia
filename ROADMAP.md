@@ -16,10 +16,13 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - **Apps are generated, not maintained.** `apps/` holds recipes (`single.yml`, `multi.yml`); the
   apps themselves are throwaway output of `cnfs new`. A hand edit to a generated app means a
   template or generator is missing something.
-- **UI:** apps use Phlex and RubyUI; no ERB. Engine views are Phlex classes using RubyUI
-  components; each engine declares the components it needs and its installer adds them to the
-  app (RubyUI copies source into the app). The `ui` engine is shelved until engines duplicate
-  view code.
+- **UI (ADR 0008, 2026-10-23; supersedes "Phlex and RubyUI everywhere"):** the core gems are
+  headless: no screens, no layouts, no front-end gem dependencies. The exceptions are protocol
+  flows (`/auth/*`) and plain, overridable system pages. `partitia-ui` (Phlex + RubyUI), a
+  sibling gem in this repo, owns the operator screens, their thin controllers and the default
+  shell. The navigation contract (a registry) is in support, the shell in partitia-ui, and the
+  layout in the app (`cnfs new`). The cross-layer look is semantic design tokens. appwork follows
+  the same strategy and is Phlex-based.
 - **Docs:** `doc/` (ADRs, plans 001–012) and the Obsidian notes are a baseline to mine, not to
   bring up to date. New docs start from the code. ADRs 0002–0004 match the code and carry over.
 - **Tooling:** `cnfs`, an anfs tool in the cnfs source's `rails` package, is how engines and
@@ -336,6 +339,19 @@ Found while drawing DIAGRAMS.md (2026-10-22), small, after the pause:
 - [ ] Stale comments: tenanted `install.rake` (a hard-coded `db/global_migrate` line), iam's engine
       (`[:primary]`; it is `[:tenant]` in a multi app)
 
+Headless core (ADR 0008), small, after the pause:
+
+- [ ] iam drops turbo-rails, stimulus-rails, importmap-rails, tailwindcss-rails and its layout;
+      tenanted drops tailwindcss-rails
+- [ ] tenanted's tenant console (views and controllers) moves to partitia-ui; until D9 it stays
+      as is behind partitia-ui's mount, or is console- and service-only. Decide at the start
+- [ ] System pages (`tenant-unknown`, sign-in unavailable, apex 404) are plain HTML from i18n,
+      overridable by the host at the same view path
+- [ ] support: the navigation registry (sections per context; items with label, path, icon,
+      order, `visible_if`); engines register in their initializers
+- [ ] `cnfs engine check`: the headless rule (no views, layouts or front-end dependencies outside
+      `ui` gems; protocol flows and system pages exempt); replaces the ERB-views warning
+
 ## Pause — the person reviews
 
 After D6: the person reviews and pushes every repo (the first CI run on the new layout), then
@@ -412,16 +428,23 @@ capabilities go to anfs as `anfs report` feature requests.
 
 Left to apps: billing; feature flags through flipper (appwork ROADMAP).
 
-## D9 — UI: Phlex and RubyUI
+## D9 — partitia-ui: Phlex and RubyUI (ADR 0008)
 
-Last, on purpose: it has the most long-term design implications. Open before it starts: its
-scope, the visual baseline (fudge's shadcn tokens as they are, or another look), and whether ui
-is only an installer or also ships shared runtime components (layout, nav, flash).
+Last, on purpose: it carries the long-term toolkit commitment. Starts with a spike: the tenant
+console in partitia-ui, rendered inside an ERB host and a Phlex host, before more screens are
+built. Open before it starts: the visual baseline (fudge's shadcn tokens as they are, or another
+look).
 
-- [ ] The ui install generator as the home of fudge's setup (`apps/fudge`): its `phlex.rb` and
-      `ruby_ui.rb` initializers, `Components::Base`/`Views::Base`, shadcn design tokens, the
-      RubyUI component flow; a Tailwind `@source` line for each engine
-- [ ] Phlex views for cognito's 503 page and tenanted's ERB views
+- [ ] Spike: the tenant console in partitia-ui, its thin controllers over tenanted's services,
+      inside the default shell, in an ERB host and a Phlex host; the yak shaving left is noted
+- [ ] `partitia:ui:install`: the Phlex/RubyUI setup (from fudge, `apps/fudge`: the `phlex.rb` and
+      `ruby_ui.rb` initializers, `Components::Base`/`Views::Base`), the token list (semantic CSS
+      variables, shadcn names), the Tailwind `@source` line for partitia-ui
+- [ ] The default shell: top bar, navigation and user menu from support's registry, flash,
+      content slot; per context (tenant app, platform console)
+- [ ] `cnfs new` generates the app's layout on the shell (the testbed apps regenerated)
+- [ ] Later, as partitia's services land: screens for users and roles (S1), invitations (S2),
+      audit (S4), API tokens (S5)
 - [ ] Later, for support and ui: fudge's `TableDefinition` (declarative columns, param allowlist,
       search and facets) and `Components::DataTable` (RubyUI DataTable, pagy), both marked there
       for "eventual home" in the gems
