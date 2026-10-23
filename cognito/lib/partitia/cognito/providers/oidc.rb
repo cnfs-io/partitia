@@ -27,7 +27,10 @@ module Partitia
         attr_reader :issuer, :client_id
 
         def initialize(issuer:, client_id:, client_secret: nil, scopes: DEFAULT_SCOPES)
-          @issuer = issuer.to_s.chomp("/")
+          # The ID token's iss must equal the issuer exactly as configured (OIDC Core
+          # 3.1.3.7): Authentik's ends in "/". The trimmed form builds URLs.
+          @expected_issuer = issuer.to_s
+          @issuer = @expected_issuer.chomp("/")
           @client_id = client_id
           @client_secret = client_secret
           @scopes = scopes
@@ -88,7 +91,7 @@ module Partitia
             payload, = JWT.decode(
               id_token, key, true,
               algorithms: ALGORITHMS,
-              iss: @issuer, verify_iss: true,
+              iss: @expected_issuer, verify_iss: true,
               aud: @client_id, verify_aud: true,
               verify_expiration: true
             )

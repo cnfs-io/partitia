@@ -51,18 +51,20 @@ Partitia::Cognito.identity_resolver = ->(assertion, policy, link_token) {
 
 # --- Policy resolver ------------------------------------------------------
 #
-# Maps a request to the policy IAM applies. The gem default fails CLOSED to
-# :invite_only — a login with no pre-existing invite link is rejected. A test
-# app usually wants JIT provisioning, where an unknown-but-verified Authentik
-# user gets a principal created on the spot:
-Partitia::Cognito.policy_resolver = ->(_request) { :jit }
+# Maps a request to the policy IAM applies. Left unset, the gem default fails
+# CLOSED to :invite_only: an identity signs in only once it is linked to a
+# principal. The first one is root, claimed with its bootstrap link token:
 #
-# Fail-closed default (uncomment to require invites):
-# Partitia::Cognito.policy_resolver = ->(_request) { :invite_only }
+#   bin/rails partitia:iam:bootstrap        # TENANT=<subdomain> when multi-tenant
+#   -> LINK_TOKEN=…; sign in once at /auth/login?link_token=<it>
+#
+# JIT provisioning (any verified Authentik user gets a principal on the spot) is
+# an opt-in, e.g. for a self-serve end-user app:
+# Partitia::Cognito.policy_resolver = ->(_request) { :jit }
 #
 # Per-route policy (e.g. JIT only on a dedicated signup path):
 # Partitia::Cognito.policy_resolver = ->(request) {
-#   request.path.start_with?("/auth/login") ? :jit : :invite_only
+#   request.path.start_with?("/signup") ? :jit : :invite_only
 # }
 
 # --- Redirect targets (optional) ------------------------------------------

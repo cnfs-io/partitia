@@ -26,7 +26,7 @@ The generator is idempotent (a second run changes nothing and asks nothing):
 | Writes | When |
 |---|---|
 | `mount Partitia::Cognito::Engine => "/auth"` in `config/routes.rb` | not already mounted |
-| `config/initializers/partitia_cognito.rb`: provider, `identity_resolver`, `policy_resolver` | absent |
+| `config/initializers/partitia_cognito.rb`: provider, `identity_resolver` (the policy stays the fail-closed `:invite_only`; JIT is a commented opt-in) | absent |
 | `config/partitia_cognito.yml`: issuer, client_id, scopes per environment | absent |
 | `:code, :state` in `config/initializers/filter_parameter_logging.rb` | not already filtered (file created if missing) |
 
@@ -84,10 +84,17 @@ The generated initializer wires `identity_resolver` to
 `Partitia::Iam::Resolution.resolve` (resolved lazily; neither gem requires the
 other). `session_key` must match iam's (both default `:partitia_iam_user_id`).
 
+The first sign-in is root's, with its bootstrap link token
+(`bin/rails partitia:iam:bootstrap` prints it; sign in once at
+`/auth/login?link_token=<it>`): see partitia-iam's README, "First sign-in".
+
 ## With partitia-tenanted
 
-The callback has to run in the tenant's database: put tenanted's Rack resolver in
-front of the mount (see `tenanted/spec/dummy/config/initializers/identity.rb`).
+The callback has to run in the tenant's database. partitia-tenanted selects it at
+the Rack layer (`Partitia::Tenanted.request_handle`), before the mount, so a
+sign-in on `acme.localhost` lands in acme's database with no app wiring. Authentik
+must accept each tenant's callback: `pt services` registers a regex redirect URI
+(`http://[a-z0-9-]+\.localhost:<port>/auth/callback`) beside the apex one.
 
 ## Development
 

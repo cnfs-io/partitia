@@ -37,6 +37,15 @@ RSpec.describe Partitia::Cognito::Providers::Oidc do
         .to raise_error(Partitia::Cognito::Providers::VerificationError)
     end
 
+    it "matches the issuer exactly as configured, trailing slash and all (Authentik's)" do
+      slashed = oidc_provider(issuer: "#{OidcHelpers::ISSUER}/")
+      token = id_token(iss: "#{OidcHelpers::ISSUER}/")
+      expect(slashed.verify(id_token: token, nonce: OidcHelpers::NONCE).issuer).to eq("#{OidcHelpers::ISSUER}/")
+
+      expect { slashed.verify(id_token: id_token, nonce: OidcHelpers::NONCE) }
+        .to raise_error(Partitia::Cognito::Providers::VerificationError)
+    end
+
     it "rejects a wrong audience" do
       token = id_token(aud: "someone-else")
       expect { provider.verify(id_token: token, nonce: OidcHelpers::NONCE) }
