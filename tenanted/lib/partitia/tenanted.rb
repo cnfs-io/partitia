@@ -56,6 +56,28 @@ module Partitia
       end
     end
 
+    # partitia-cognito's before_sign_in hook (the engine adds it when cognito is
+    # present), run in the sessions controller before /login and /callback. A
+    # sign-in lands in the database the Rack layer selected; with none there is
+    # nothing to sign in to, so stop before the IdP round trip:
+    #
+    #   * an unknown tenant: to /tenant-unknown, like the app's own routes;
+    #   * the apex (no tenant named): 404. Apex login asks for the workspace
+    #     (ADR 0003 §8); the platform's sign-in is the host's own entry point that
+    #     pins the reserved database (the dummy's /platform/login).
+    SIGN_IN_NEEDS_DATABASE = lambda do
+      next if ApplicationRecord.current_tenant.present?
+
+      tenant_name = Partitia::Tenanted.tenant_resolver.call(request)
+      if tenant_name.present?
+        flash[:unknown_tenant] = tenant_name
+        redirect_to main_app.tenant_unknown_path
+      else
+        render plain: "No workspace here: sign in at your workspace's address " \
+                      "(<workspace>.#{request.host_with_port}).", status: :not_found
+      end
+    end
+
     class << self
       attr_writer :tenant_resolver
 
@@ -76,11 +98,18 @@ module Partitia
       # The handle of the tenant a request names, or nil (no name, or no such
       # Tenant). The Rack-layer resolver (see Engine): the app's tenant_resolver
       # parses a name, the global registry maps it to the database handle.
+      #
+      # It runs inside the request's server span (partitia-telemetry's
+      # rack_tracing), so it puts tenant.subdomain and tenant.handle on that span:
+      # every request's trace says which tenant it was for. A no-op without an
+      # OpenTelemetry SDK or with rack_tracing off.
       def request_handle(request)
         name = tenant_resolver.call(request)
         return nil if name.blank?
 
-        Tenant.find_by(subdomain: name)&.handle
+        handle = Tenant.find_by(subdomain: name)&.handle
+        Partitia::Support::Instrumentable.set_span_context("tenant.subdomain" => name, "tenant.handle" => handle)
+        handle
       end
 
       # The ordered after_provision registry (ADR 0003 §6): callables run inside

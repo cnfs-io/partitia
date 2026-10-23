@@ -201,5 +201,6 @@ Checked against a fresh `rails new` app as well as the dummy.
 - **`partitia:tenanted:migrate:status`** replaces `db:migrate:status:tenant` and
   `:global`: global, platform and every tenant database, pending shown as
   `down`, never raising `PendingMigrationError`; `ARTENANT=` for one.
-- **No Config class.** The one scalar, `config.partitia_tenanted.trace`, is an
-  observability switch read in an engine initializer; left for telemetry's config.
+- **No Config class.** The one scalar, `config.partitia_tenanted.trace`, was an
+  observability switch; D6 removed it (telemetry's `rack_tracing` is the one
+  control; tenanted adds `tenant.*` attributes to its server span).

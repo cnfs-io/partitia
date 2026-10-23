@@ -15,6 +15,10 @@ module Partitia
     # Customize by overriding #unknown (call super or replace) and/or ejecting
     # the view with: bin/rails generate partitia:tenanted:views tenant_not_found
     class TenantNotFoundController < ::ApplicationController
+      # The not-found seam's target: resolving the (unknown) tenant here again
+      # would send the request back to this page, a redirect loop.
+      skip_around_action :switch_tenant, raise: false
+
       # The resolved-but-unknown tenant name, surfaced to the view. Set by the
       # not-found seam via flash so it survives the redirect; falls back to the
       # request subdomain for direct visits.

@@ -34,4 +34,19 @@ RSpec.describe "Partitia::Tenanted.request_handle" do
 
     expect(app.config.active_record_tenanted.tenant_resolver.call(FakeRequest.new(host: "acme.localhost"))).to eq(tenant.handle)
   end
+
+  it "puts the tenant on the request's span (partitia-telemetry's server span)" do
+    tenant = create_tenant!(subdomain: "acme")
+    allow(Partitia::Support::Instrumentable).to receive(:set_span_context)
+
+    Partitia::Tenanted.request_handle(FakeRequest.new(host: "acme.localhost"))
+    Partitia::Tenanted.request_handle(FakeRequest.new(host: "bogus.localhost"))
+    Partitia::Tenanted.request_handle(FakeRequest.new(host: "localhost"))
+
+    expect(Partitia::Support::Instrumentable).to have_received(:set_span_context)
+      .with("tenant.subdomain" => "acme", "tenant.handle" => tenant.handle)
+    expect(Partitia::Support::Instrumentable).to have_received(:set_span_context)
+      .with("tenant.subdomain" => "bogus", "tenant.handle" => nil)
+    expect(Partitia::Support::Instrumentable).to have_received(:set_span_context).twice
+  end
 end

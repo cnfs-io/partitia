@@ -39,8 +39,8 @@ module Partitia
 
         # The `outcome` payload key makes the three resolution paths distinct in a
         # trace: untenanted (blank), switched, or not_found. The handle is added
-        # once known, and promoted to the request span (+ baggage set by the
-        # middleware) so every subsequent span in the trace carries the tenant.
+        # once known. The request's server span already has tenant.subdomain and
+        # tenant.handle, from the Rack layer (Partitia::Tenanted.request_handle).
         instrument_tenant(:switch, subdomain: tenant_name) do |payload|
           if tenant_name.blank?
             payload[:outcome] = "untenanted"
@@ -61,9 +61,6 @@ module Partitia
 
             payload[:outcome] = "switched"
             payload[:handle]  = tenant.handle
-            Partitia::Support::Instrumentable.set_span_context(
-              "tenant.subdomain" => tenant_name, "tenant.handle" => tenant.handle
-            )
             ApplicationRecord.with_tenant(tenant.handle, &block)
           end
         end

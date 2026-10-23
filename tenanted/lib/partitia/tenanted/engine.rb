@@ -33,8 +33,11 @@ module Partitia
       Partitia::Support.storage_scope = -> { ApplicationRecord.current_tenant }
 
       # Ensure each registered gem's models that are not explicit subclasses of GlobalRecord
-      # are subtenant classes
-      config.after_initialize do
+      # are subtenant classes. to_prepare, not after_initialize: a code reload in
+      # development gives the engines fresh ApplicationRecord classes, which would
+      # otherwise lose the wiring and query the global database (cognito's callback
+      # then fails on partitia_iam_identity_links).
+      config.to_prepare do
         Partitia::Support.plugins.each do |plugin|
           next unless defined?(plugin.module_parent::ApplicationRecord)
 
@@ -61,20 +64,12 @@ module Partitia
         app.config.active_record_tenanted.tenant_resolver = ->(request) { Partitia::Tenanted.request_handle(request) }
       end
 
-      # Opt-in request-level tracing. Off by default; the host enables it with
-      #   config.partitia_tenanted.trace = true
-      # which inserts the outer-request-span middleware (TelemetryMiddleware). The
-      # flag must be set in config/application.rb or an environments file — early
-      # enough that this engine initializer sees it (a config/initializers/*.rb
-      # runs after engine initializers, too late to build the middleware stack).
-      # Telemetry is still a no-op until the app installs partitia-telemetry + an OTel
-      # SDK, so this only decides whether the request span is emitted at all.
-      config.partitia_tenanted = ActiveSupport::OrderedOptions.new
-
-      initializer "partitia_tenanted.telemetry_middleware" do |app|
-        if app.config.partitia_tenanted.trace
-          require "partitia/tenanted/telemetry_middleware"
-          app.middleware.use Partitia::Tenanted::TelemetryMiddleware
+      # With partitia-cognito: no sign-in where no database was selected (an
+      # unknown tenant, the apex). Registered once, after every gem has loaded;
+      # cognito is optional (ARCHITECTURE §2), so only behind defined?.
+      config.after_initialize do
+        if defined?(Partitia::Cognito)
+          Partitia::Cognito.before_sign_in << Partitia::Tenanted::SIGN_IN_NEEDS_DATABASE
         end
       end
 

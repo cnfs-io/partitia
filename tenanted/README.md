@@ -76,6 +76,18 @@ middleware, given `Partitia::Tenanted.request_handle`: the resolver, then the
 `acme.localhost` lands in acme's database. A blank or unknown subdomain runs
 untenanted, and the app's own routes redirect it to `/tenant-unknown`.
 
+With partitia-cognito, a sign-in needs a selected database: the engine adds a
+`Partitia::Cognito.before_sign_in` hook, so `/auth/login` (and `/auth/callback`)
+on an unknown subdomain redirects to `/tenant-unknown`, and on the apex answers
+404 ("sign in at your workspace's address"), both before the IdP. The apex is
+not a sign-in (ADR 0003 §8: apex login asks for the workspace). The platform's
+own sign-in is a host entry point that pins the reserved database for the round
+trip, as the dummy's `/platform/login` does (`identity.rb`); its root's link
+token is `bin/rails partitia:iam:bootstrap TENANT=platform`.
+
+With partitia-telemetry (`rack_tracing`, on by default), every request's server
+span carries `tenant.subdomain` and `tenant.handle`, set at the Rack layer.
+
 With partitia-iam, each tenant's root principal is seeded on creation with a
 bootstrap link token; `bin/rails partitia:iam:bootstrap TENANT=<subdomain>`
 issues a fresh one for the first sign-in (partitia-iam's README). The console
@@ -153,9 +165,8 @@ and the current tenant in the prompt.
 
 - `tld_length = 0` is development-only; production resolves subdomains with the
   default `tld_length`.
-- Request tracing: `config.partitia_tenanted.trace = true` in
-  `config/application.rb` or an environment file adds the request-span
-  middleware (a no-op without partitia-telemetry).
+- Request tracing is partitia-telemetry's (`rack_tracing`); tenanted only adds
+  the tenant attributes to its server span.
 
 ## License
 

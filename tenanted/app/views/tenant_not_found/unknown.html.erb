@@ -15,10 +15,10 @@
   <%#
     Edit this page to point people at your real entry points. Eject it with:
       bin/rails generate partitia:tenanted:views tenant_not_found
-    The link below goes to the bare-domain registry; swap it for your signup
-    flow once you have one.
+    The link below goes to the bare domain ("/" there: the app may have no root
+    route yet); swap it for your signup flow once you have one.
   %>
   <%= link_to "Go to the main site",
-        root_url(subdomain: false),
+        "#{request.protocol}#{request.domain}#{request.port_string}/",
         class: "rounded-md px-3.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white inline-block font-medium" %>
 </div>
