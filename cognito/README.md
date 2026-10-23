@@ -70,7 +70,9 @@ client ID `<app-slug>`; redirect URI `http://localhost:3000/auth/callback`.
 
 Module slots (callables, not config): `identity_resolver` and `provider` raise
 `ConfigurationError` when unset; `policy_resolver` defaults to `:invite_only`;
-`session_key`, `after_sign_in_path`, `after_sign_out_path`.
+`session_key`, `after_sign_in_path`, `after_sign_out_path`; `before_sign_in`, a
+list of callables run in the controller before `/auth/login` and `/auth/callback`
+(one that redirects or renders stops the sign-in before the IdP; empty by default).
 
 When the IdP can't be reached (connection refused, timeout, DNS, TLS, a non-200
 discovery or JWKS response), `/auth/login` and `/auth/callback` answer **503** with a
@@ -95,6 +97,10 @@ the Rack layer (`Partitia::Tenanted.request_handle`), before the mount, so a
 sign-in on `acme.localhost` lands in acme's database with no app wiring. Authentik
 must accept each tenant's callback: `pt services` registers a regex redirect URI
 (`http://[a-z0-9-]+\.localhost:<port>/auth/callback`) beside the apex one.
+
+Where tenanted selected no database there is nothing to sign in to: tenanted adds a
+`before_sign_in` hook, so `/auth/login` on an unknown subdomain redirects to
+`/tenant-unknown` and on the apex answers 404, both before the IdP.
 
 ## Development
 

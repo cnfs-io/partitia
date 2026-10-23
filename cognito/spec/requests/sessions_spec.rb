@@ -111,4 +111,37 @@ RSpec.describe "broker sessions", type: :request do
       expect(response).to redirect_to("/home")
     end
   end
+
+  describe "before_sign_in hooks" do
+    it "runs before /auth/login and stops the flow when one redirects (no IdP round trip)" do
+      seen = []
+      Partitia::Cognito.before_sign_in << -> { seen << action_name }
+      Partitia::Cognito.before_sign_in << -> { redirect_to "/elsewhere" }
+      Partitia::Cognito.before_sign_in << -> { seen << :never }
+
+      get "/auth/login"
+
+      expect(response).to redirect_to("/elsewhere")
+      expect(seen).to eq([ "new" ])
+      expect(session[Partitia::Cognito::SessionsController::SESSION_STASH]).to be_nil
+    end
+
+    it "runs before /auth/callback and can render instead of resolving" do
+      Partitia::Cognito.identity_resolver = ->(*) { raise "not reached" }
+      Partitia::Cognito.before_sign_in << -> { render plain: "no sign-in here", status: :not_found }
+
+      get "/auth/callback", params: { code: "c", state: "s" }
+
+      expect(response).to have_http_status(:not_found)
+      expect(response.body).to eq("no sign-in here")
+    end
+
+    it "lets the sign-in proceed when no hook halts" do
+      Partitia::Cognito.before_sign_in << -> { }
+
+      get "/auth/login"
+
+      expect(response.location).to start_with("#{OidcHelpers::ISSUER}/authorize")
+    end
+  end
 end

@@ -8,6 +8,8 @@ module Partitia
     class SessionsController < ApplicationController
       SESSION_STASH = :partitia_cognito_flow
 
+      before_action :run_before_sign_in, only: %i[new callback]
+
       # GET /login — start the auth-code + PKCE flow: stash state/nonce/verifier
       # (and an optional bootstrap/invite link_token), then redirect to the IdP.
       def new
@@ -104,6 +106,15 @@ module Partitia
       end
 
       private
+
+      # Partitia::Cognito.before_sign_in, in order; the first that redirects or
+      # renders halts the action.
+      def run_before_sign_in
+        Partitia::Cognito.before_sign_in.each do |hook|
+          instance_exec(&hook)
+          break if performed?
+        end
+      end
 
       def valid_state?(stash)
         params[:state].present? &&

@@ -67,10 +67,19 @@ module Partitia
         @after_sign_out_path ||= "/"
       end
 
+      # Optional hooks, run in order in the sessions controller's context
+      # (instance_exec) before a sign-in starts (/login) and before a callback is
+      # handled. One that redirects or renders ends the flow there, before any IdP
+      # round trip. Empty by default. partitia-tenanted adds one: no sign-in where
+      # it selected no database (an unknown tenant, the apex).
+      def before_sign_in
+        @before_sign_in ||= []
+      end
+
       # Reset all slots — for tests and re-configuration.
       def reset_configuration!
         @identity_resolver = @policy_resolver = @session_key = @provider =
-          @after_sign_in_path = @after_sign_out_path = nil
+          @after_sign_in_path = @after_sign_out_path = @before_sign_in = nil
       end
     end
   end
