@@ -40,7 +40,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       `path`/`cd`, `config`; bats suite
 - [x] `engine check [gem...]` — the contract's static checks per gem (naming, Ruby, lockfile
       platforms, CI matrix, test schema, no `force: true`, registration, install generator, ERB
-      views as a warning until D7); failures and warnings only unless `--all`; exit 1 on failure
+      views as a warning until D9); failures and warnings only unless `--all`; exit 1 on failure
 - [x] `services` — the pcm services the app's engines declare, up/down (`--down` also takes the
       DSN out of the secrets store)
 - [x] `smoke [app]` — the D6 acceptance as a command. Cheap first: `/up` 200, `/auth/login` 302 to
@@ -95,7 +95,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] Known from the rename: `partitia:tenanted:views` `source_root`; ui's `eager_load!`; tenanted's
       test DB
 - [x] The gaps table in `ARCHITECTURE.md`, engine by engine; what is left there is small or
-      belongs to D7 (ERB views, ui's installer)
+      belongs to D9 (ERB views, ui's installer)
 - [x] Small follow-ups from that table: cognito's unreachable IdP is a 503 (was a 500); dev
       loads `pry-byebug` only with the console; iam's README lists its integrations
 - [ ] tenanted's `trace` setting (may belong in telemetry's config, Q2)
@@ -187,7 +187,7 @@ Later (longer term):
 ## D5 — Recipes and template
 
 `pt new single|multi` produces a wired app with no manual steps. D6 depends on it; the UI does
-not (that is D7).
+not (that is D9).
 
 - [x] Engines by gem name through gem-local, not `~/spikes/chorus` paths; no `binding.pry`
 - [x] The recipe selects engines: `single` and `multi` recipes (`partitia.yml` / `<app>.yml`)
@@ -218,7 +218,7 @@ not (that is D7).
 - Tenant resolution runs in `ApplicationController`: `/` on a fresh app is Rails' welcome page and
   resolves nothing. Check it with `/tenants`: `acme.localhost` 403 (the console guard, after the
   tenant resolved), an unknown subdomain 302 to `/tenant-unknown`.
-- `pt engine check` with no gems fails on `ui` (no installer: D7); check the recipe's engines by
+- `pt engine check` with no gems fails on `ui` (no installer: D9); check the recipe's engines by
   name.
 
 ## D6 — The demo
@@ -230,9 +230,30 @@ not (that is D7).
       `http://[a-z0-9-]+\.localhost:3000/auth/callback`), each tenant keeping its own session.
       Production custom domains: later
 
-## D7 — UI: Phlex and RubyUI
+- [ ] One control for request tracing: tenanted's `config.partitia_tenanted.trace` request span
+      folds into telemetry's `rack_tracing` (tenanted adds tenant attributes to the request span)
 
-Last: nothing depends on it.
+## Pause — the person reviews
+
+After D6: the person reviews and pushes every repo (the first CI run on the new layout), then
+tests by hand. Nothing starts until they say.
+
+## D7 — Production deploy (to scope)
+
+Not designed yet. The choices that touch the engines: the production database (tenanted on
+SQLite, or Postgres), the deploy target (Kamal, or RWS), and the secrets path (fnox and
+1Password through the space, credentials).
+
+## D8 — appwork up to the partitia names
+
+The ~45 files across chatter, chorus, gtd, micro_manager and okf still on the old names (see
+"Outside this repo"), brought onto the partitia engines and contract.
+
+## D9 — UI: Phlex and RubyUI
+
+Last, on purpose: it has the most long-term design implications. Open before it starts: its
+scope, the visual baseline (fudge's shadcn tokens as they are, or another look), and whether ui
+is only an installer or also ships shared runtime components (layout, nav, flash).
 
 - [ ] The ui install generator as the home of fudge's setup (`apps/fudge`): its `phlex.rb` and
       `ruby_ui.rb` initializers, `Components::Base`/`Views::Base`, shadcn design tokens, the
@@ -241,8 +262,15 @@ Last: nothing depends on it.
 - [ ] Later, for support and ui: fudge's `TableDefinition` (declarative columns, param allowlist,
       search and facets) and `Components::DataTable` (RubyUI DataTable, pagy), both marked there
       for "eventual home" in the gems
-- [ ] When D7 has taken what it needs from `apps/` (single, multi, factory, fudge: the apps built on
+- [ ] When D9 has taken what it needs from `apps/` (single, multi, factory, fudge: the apps built on
       the earlier gems, broken since the move), the person removes it
+
+## KIV
+
+Kept in view, not scheduled:
+
+- [ ] `db_tracing`: an opt-in telemetry setting for ActiveRecord spans (off by default; one span
+      per query is noisy)
 
 ## Outside this repo
 
