@@ -19,10 +19,12 @@ module Partitia
       private
 
       # A stale/absent session id resolves to nil — treated as anonymous, never an
-      # error.
+      # error. No id, no query: an anonymous request touches no database (under
+      # partitia-tenanted the apex has no identity plane to query).
       def resolve_current_user
         instrument_iam(:authenticate_request) do |event|
-          Partitia::Iam::Current.user = Partitia::Iam::Principal.find_by(id: session[Partitia::Iam.config.session_key])
+          principal_id = session[Partitia::Iam.config.session_key]
+          Partitia::Iam::Current.user = principal_id.presence && Partitia::Iam::Principal.find_by(id: principal_id)
           event[:authenticated] = !Partitia::Iam::Current.user.nil?
           # Mirror the span's boolean for now-visibility. Never the session id.
           partitia_iam_logger.debug { "resolve_current_user: authenticated=#{event[:authenticated]}" }

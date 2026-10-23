@@ -55,6 +55,8 @@ module Partitia
           end
           say "  - Production: set PARTITIA_IAM_HMAC_KEY or credentials.partitia_iam.hmac_key."
           say "    The development fallback is NOT a secret; production must not use it."
+          say "  - First sign-in: bin/rails partitia:iam:bootstrap (TENANT=<subdomain> when multi-tenant)"
+          say "    prints root's one-time LINK_TOKEN: sign in once at /auth/login?link_token=<it>."
           say "  - In each protected controller:"
           say "      include Partitia::Iam::Authenticatable"
           say "      before_action :require_authentication"

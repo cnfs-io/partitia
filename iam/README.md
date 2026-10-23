@@ -54,6 +54,26 @@ On success cognito stores `principal.id` under its `session_key`;
 `:partitia_iam_user_id`, so change both or neither. Resolution has no tenancy
 logic: it runs in whatever database is already selected.
 
+### First sign-in: claiming root
+
+Every database has one root principal (ADR 0004), and cognito's policy fails closed
+(`:invite_only`): nobody signs in until an identity is linked. The first one is root,
+claimed with its bootstrap link token:
+
+```sh
+bin/rails partitia:iam:bootstrap                 # single-tenant (OWNER_EMAIL=… for root's email)
+bin/rails partitia:iam:bootstrap TENANT=acme     # with partitia-tenanted (TENANT=platform too)
+```
+
+It prints `ROOT=unclaimed` and `LINK_TOKEN=<token>`, or `ROOT=claimed`. Sign in once
+at `/auth/login?link_token=<token>` (cognito's mount): `Resolution` binds the IdP
+identity you use to root and consumes the token. From then on root signs in with no
+token. Each run while unclaimed issues a new token (single use, 7 days) and the old
+one stops working; a database with no root yet (a single-tenant app) is seeded first
+with the Account and root, as tenants are. A locked-out root:
+`Partitia::Iam::RootRecovery.reset!` in its database. The service behind it is
+`Partitia::Iam::Bootstrap`.
+
 ### With partitia-tenanted
 
 When partitia-tenanted is loaded, iam's engine appends `TenantSeeder` to
