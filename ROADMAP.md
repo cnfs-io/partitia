@@ -98,7 +98,7 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
       belongs to D9 (ERB views, ui's installer)
 - [x] Small follow-ups from that table: cognito's unreachable IdP is a 503 (was a 500); dev
       loads `pry-byebug` only with the console; iam's README lists its integrations
-- [ ] tenanted's `trace` setting (may belong in telemetry's config, Q2)
+- [x] tenanted's `trace` setting: removed in D6; telemetry's `rack_tracing` is the one control
 - [x] tenanted: migration status for tenant databases: `partitia:tenanted:migrate:status`
 
 **What an agent needs to know (D3):**
@@ -233,13 +233,16 @@ not (that is D9).
 - [x] First sign-in with the fail-closed default: root claims itself with its bootstrap link token
       (`bin/rails partitia:iam:bootstrap [TENANT=<subdomain>]`); `/me` is the check page
 - [ ] **The person signs in via browser** (the checklist below)
-- [ ] Sign-in on a multi-tenant app's apex or an unknown subdomain: `/auth/login` still goes to
-      Authentik and the callback is a 500 (`NoTenantError`: no identity plane there). The apex is
-      the platform's (the dummy's `platform_auth` entry point); an unknown subdomain should go
-      to `/tenant-unknown` before the IdP
-
-- [ ] One control for request tracing: tenanted's `config.partitia_tenanted.trace` request span
-      folds into telemetry's `rack_tracing` (tenanted adds tenant attributes to the request span)
+- [x] Sign-in on a multi-tenant app's apex or an unknown subdomain (was: to Authentik, then a 500,
+      `NoTenantError`). A sign-in needs the database the Rack layer selected; tenanted adds a
+      cognito `before_sign_in` hook: an unknown subdomain redirects to `/tenant-unknown`, the
+      apex answers 404 ("sign in at your workspace's address"), both before the IdP. The apex
+      is not a sign-in (ADR 0003 §8); the platform's sign-in stays a host entry point that pins
+      the reserved database (the dummy's `/platform/login`); its root's token is
+      `partitia:iam:bootstrap TENANT=platform`
+- [x] One control for request tracing: tenanted's `config.partitia_tenanted.trace` and its request
+      span are gone; with telemetry's `rack_tracing` the server span carries `tenant.subdomain`
+      and `tenant.handle` (set at the Rack layer); Overview's tenant panels query it
 
 **Browser check (the person).** Authentik's admin is `akadmin`; its password is
 `AUTHENTIK_BOOTSTRAP_PASSWORD` in `~/.config/pcm/containers/authentik/local.env` if you set it
@@ -263,8 +266,10 @@ in Authentik since, use yours.
        `http://acme.localhost:3000/auth/login?link_token=<token>`: `/me` on `acme.localhost`,
        root `owner@acme.test`, database `storage/development/<acme's handle>.sqlite3`
 7. [ ] Still in demo2: <http://localhost:3000/me> on the apex is not signed in (sessions are per
-       host; it sends you to sign in, which fails there: the open item above), and
-       <http://bogus.localhost:3000/me> goes to `/tenant-unknown`
+       host): it sends you to `/auth/login`, a 404 "No workspace here: sign in at your
+       workspace's address", with no trip to Authentik; <http://bogus.localhost:3000/me> and
+       <http://bogus.localhost:3000/auth/login> go to `/tenant-unknown` ("We couldn't find that
+       workspace")
 
 **What an agent needs to know (D6):**
 - First sign-in: cognito fails closed (`:invite_only`; its installer no longer sets `:jit`). Each
@@ -296,6 +301,21 @@ in Authentik since, use yours.
 - `curl` 8.x resolves `*.localhost` to loopback by itself; no `--resolve` needed.
 - Don't edit `partitia` while a `pt` command runs: bash reads the script as it goes (a `pt new`
   died after `rails new` finished when the file changed under it).
+- Where tenanted selected no database there is no sign-in: cognito's `before_sign_in` hooks
+  (tenanted adds one) run before `/auth/login` and `/auth/callback`. Unknown subdomain:
+  `/tenant-unknown`; apex: 404. `pt smoke` in a multi-tenant app expects that 404 on the apex
+  and checks a tenant's redirect with `--host`. The apex stays untenanted on purpose: pinning
+  it to the platform database would make the console's `POST /tenants` provision inside
+  activerecord-tenanted's shard-swap lock, and the reserved database would answer app queries
+  unguarded (ADR 0003 §2).
+- Request tracing is one switch, `rack_tracing`. tenanted sets `tenant.subdomain`/`tenant.handle`
+  on the current span from `Partitia::Tenanted.request_handle`, which runs inside OTel's Rack
+  server span (support's `Instrumentable.set_span_context`: no telemetry dependency). Inside a
+  `partitia_*` notification block the current span is that event's span, not the server span.
+- Code reloading in development: tenanted re-applies `subtenant_of` to each engine's
+  `ApplicationRecord` in `to_prepare`. In `after_initialize` a reload left iam's models on the
+  global database and every sign-in callback was a 500 (`Could not find table
+  'partitia_iam_identity_links'`) until the server restarted.
 
 ## Pause — the person reviews
 

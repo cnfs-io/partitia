@@ -155,7 +155,7 @@ Gaps against the contract, from the code on 2026-10-22. These become D3's work l
 | support | None (D3 done). A railtie, not an engine, so §3, §6 and §8 don't apply |
 | dev | Exempt from §3–§6 and §9 (Q1). Has specs now. No public `Partitia::Dev.reset!` |
 | telemetry | None (D4 done): installed into fresh apps; `pt services` provisions GlitchTip and stores the DSN; traces and errors proven end to end (`pt smoke`) |
-| tenanted | Views are ERB (§8, D9). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. `config.partitia_tenanted.trace` is an observability setting that may belong in telemetry's config (§4, Q2). Migration status also lists activerecord-tenanted's `development-tenant` template database |
+| tenanted | Views are ERB (§8, D9). `db:migrate:global` stays in the `db:` namespace on purpose, beside activerecord-tenanted's `db:migrate:tenant`. Migration status also lists activerecord-tenanted's `development-tenant` template database |
 | iam | Layout is ERB (§8, D9). README is otherwise the Rails stub (its Integrations section, §2, is written) |
 | cognito | Production has no issuer default and fails at the first discovery call rather than at boot (§4). |
 | ui | Shelved. No install generator (§5): `partitia:ui:install` is where D9's app setup (Phlex/RubyUI namespaces, the host's `app/components/ruby_ui`, tokens) belongs |
@@ -182,7 +182,10 @@ wired), then the others as above; `db:prepare`; `Partitia::Tenanted.provision_pl
 runs in acme's database; an unknown subdomain redirects to `/tenant-unknown`; `/tenants`
 answers 403 until `platform_console_guard` is set. Signing in on a tenant's subdomain needs no
 wiring: tenanted selects the tenant's database at the Rack layer, so cognito's callback runs
-there (D6). The first sign-in in any database is root's, with its bootstrap link token
+there (D6). Where it selects none there is no sign-in: on an unknown subdomain `/auth/login`
+redirects to `/tenant-unknown`, on the apex it is a 404 (tenanted's cognito `before_sign_in`
+hook); the platform's sign-in is a host entry point (the tenanted dummy's `/platform/login`).
+With telemetry, each request's server span carries `tenant.subdomain` and `tenant.handle`. The first sign-in in any database is root's, with its bootstrap link token
 (`bin/rails partitia:iam:bootstrap [TENANT=<subdomain>]`); the template's `/me` shows who is
 signed in.
 
