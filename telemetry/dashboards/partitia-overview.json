@@ -7,7 +7,7 @@
   ],
   "editable": true,
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -292,13 +292,200 @@
       }
     },
     {
+      "id": 12,
+      "type": "row",
+      "title": "HTTP requests (OTel Rack/ActionPack server spans, rack_tracing)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Request rate by route",
+      "description": "Server spans per second per http.route (GET /up, GET /auth/login, ...): the app request span from rack_tracing.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${service:regex}\" && kind=server} | rate() by (name)",
+          "metricsQueryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "p95 request latency by route",
+      "description": "95th percentile duration of the request span, per route.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 18,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${service:regex}\" && kind=server} | quantile_over_time(duration, .95) by (name)",
+          "metricsQueryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Requests by status code",
+      "description": "Requests per second per http.response.status_code.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 18,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=~\"${service:regex}\" && kind=server} | rate() by (span.http.response.status_code)",
+          "metricsQueryType": "range"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
       "id": 6,
       "type": "row",
       "title": "Requests (partitia-tenanted's request span, config.partitia_tenanted.trace = true)",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 17,
+        "y": 26,
         "w": 24,
         "h": 1
       },
@@ -315,7 +502,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 18,
+        "y": 27,
         "w": 12,
         "h": 8
       },
@@ -373,7 +560,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 18,
+        "y": 27,
         "w": 12,
         "h": 8
       },
@@ -427,7 +614,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 35,
         "w": 24,
         "h": 1
       },
@@ -444,7 +631,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 36,
         "w": 24,
         "h": 9
       },
@@ -480,7 +667,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 36,
+        "y": 45,
         "w": 24,
         "h": 9
       },

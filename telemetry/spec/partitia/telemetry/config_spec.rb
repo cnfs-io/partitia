@@ -20,6 +20,7 @@ RSpec.describe Partitia::Telemetry::Config do
         expect(described_class.error_reporting?).to be(false)
         expect(described_class.prefix_list).to eq(%w[partitia])
         expect(described_class.service_name).to be_nil
+        expect(described_class.rack_tracing).to be(true)
       end
     end
 
@@ -51,6 +52,16 @@ RSpec.describe Partitia::Telemetry::Config do
         expect(described_class.error_reporting?).to be(true)
         expect(described_class.prefix_list).to eq(%w[partitia myapp])
         expect(Partitia::Telemetry.prefixes).to eq(%w[partitia myapp])
+      end
+    end
+  end
+
+  describe "rack_tracing" do
+    { "false" => false, "0" => false, "no" => false, "true" => true, "1" => true }.each do |value, expected|
+      it "is #{expected} with PARTITIA_TELEMETRY_RACK_TRACING=#{value}" do
+        clean("PARTITIA_TELEMETRY_RACK_TRACING" => value) do
+          expect(described_class.rack_tracing).to be(expected)
+        end
       end
     end
   end

@@ -10,6 +10,7 @@
 #
 #   service_name   default: the app's module name, underscored
 #   otlp_endpoint  default: http://localhost:4318 (pcm's stack/telemetry collector)
+#   rack_tracing   default: true (request spans; PARTITIA_TELEMETRY_RACK_TRACING=false)
 #
 # The standard OTEL_* variables still win (OTel's convention): with
 # OTEL_SERVICE_NAME set the SDK names the service, and with
@@ -18,11 +19,6 @@
 
 require "opentelemetry/sdk"
 require "opentelemetry/exporter/otlp"
-
-# Host-side auto-instrumentation is opt-in. Uncomment after adding the matching
-# gems to your Gemfile (see the partitia-telemetry README). Use EITHER the -all
-# metapackage OR hand-picked gems, never both.
-# require "opentelemetry/instrumentation/all"
 
 telemetry = Partitia::Telemetry::Config
 
@@ -39,11 +35,7 @@ OpenTelemetry::SDK.configure do |c|
     )
   end
 
-  # Enable host framework auto-instrumentation (needs the gems required above):
-  # c.use_all
-  # or hand-pick:
-  # c.use "OpenTelemetry::Instrumentation::Rails"
-  # c.use "OpenTelemetry::Instrumentation::Rack"
+<%= request_tracing_snippet -%>
 end
 
 # Attach the partitia-telemetry notification -> span bridge. The Railtie already

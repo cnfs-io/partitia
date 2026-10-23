@@ -19,6 +19,10 @@ module Partitia
     #                  never as a literal in the app.
     #   prefixes       Event-name prefixes the span bridge subscribes to
     #                  (`PARTITIA_TELEMETRY_PREFIXES=partitia,myapp`).
+    #   rack_tracing   Trace the app's requests with OTel's Rack, ActionPack and
+    #                  ActionView instrumentation (the generated initializer reads
+    #                  it). Default true; `PARTITIA_TELEMETRY_RACK_TRACING=false`
+    #                  (or 0/no) turns it off. The partitia_* spans stay on either way.
     #
     # The standard OTEL_* variables still win for the OTel SDK (OTel's own
     # convention): when one is set, the sdk_* readers below return nil and the
@@ -39,7 +43,11 @@ module Partitia
 
       attr_config :service_name, :error_dsn,
                   otlp_endpoint: DEFAULT_OTLP_ENDPOINT,
-                  prefixes: DEFAULT_PREFIXES
+                  prefixes: DEFAULT_PREFIXES,
+                  rack_tracing: true
+
+      # ENV values are strings; without this "0" would autocast to 0 (truthy).
+      coerce_types rack_tracing: :boolean
 
       # service_name, else the Rails app's module name underscored, else nil.
       def resolved_service_name

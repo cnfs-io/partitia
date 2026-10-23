@@ -22,6 +22,12 @@ group :development, :test do
   # SDK + in-memory exporter, present in the suite ONLY, to prove spans actually
   # emit when a host opts in. The gem itself never depends on the SDK.
   gem "opentelemetry-sdk"
+
+  # The request instrumentation the generated initializer turns on (rack_tracing),
+  # loaded by the suite to prove request spans parent the partitia_* spans.
+  gem "opentelemetry-instrumentation-rack"
+  gem "opentelemetry-instrumentation-action_pack"
+  gem "opentelemetry-instrumentation-action_view"
 end
 
 group :development do

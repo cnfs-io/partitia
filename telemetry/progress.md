@@ -184,3 +184,24 @@ The service-side README lives with the stack at `chorus/services/telemetry`.
 - Boot warns once when the SDK isn't configured.
 - `partitia.services = "telemetry glitchtip"`.
 - Specs 14 → 35; rubocop clean.
+
+---
+
+## D4 — request tracing (`rack_tracing`)
+
+- `Config#rack_tracing`, default true, `coerce_types :boolean` (without it
+  anyway_config autocasts ENV "0" to the Integer 0, which is truthy).
+- Generated `opentelemetry.rb` `c.use`s OTel's Rack, ActionPack and ActionView
+  instrumentation inside the SDK configure block when it is on
+  (`templates/request_tracing.rb`, one snippet for the template and the upgrade).
+  Hand-picked, not `opentelemetry-instrumentation-rails` (that `use`s ActiveRecord,
+  ActiveJob, ActionMailer, ... too). No ActiveRecord spans.
+- ActionView's railtie needs `opentelemetry/instrumentation/active_support`
+  required first (NameError at boot otherwise; only a real app showed it).
+- Re-running the installer upgrades an older app: adds the three gems, injects the
+  block into its configure block (once), prints what it added.
+- The bridge's `start_span` uses the current context, so `partitia_*` spans are
+  children of the request span; proven in a spec (Rack + in-memory exporter) and
+  in Tempo from a `pt new single` app.
+- Overview dashboard: HTTP request rate / p95 by route, rate by status.
+- Specs 36 → 49.

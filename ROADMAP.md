@@ -117,6 +117,9 @@ errors in GlitchTip. Then the same for `multi` (multi-tenant).
 - [x] Grafana dashboards in this repo, provisioned through `GRAFANA_DASHBOARDS_DIR`, querying the
       `partitia_*` span names (the old `cnfs-*` dashboards are gone and queried `cnfs_*`):
       `telemetry/dashboards/`, Partitia / Overview and Partitia / Identity
+- [x] request spans: OTel's Rack, ActionPack and ActionView instrumentation, wired by
+      telemetry's installer behind `rack_tracing` (default on,
+      `PARTITIA_TELEMETRY_RACK_TRACING=false`); the `partitia_*` spans are their children
 - [x] errors: `sentry-rails` to `stack/glitchtip`, including `Rails.error.report` (the generated
       `sentry.rb` sets `register_error_subscriber`, off in sentry-rails)
 - [ ] cognito: `stack/authentik`, with a blueprint that registers the OIDC client (no manual
@@ -155,11 +158,11 @@ How it is built:
   `pcm exec -s grafana telemetry -- wget -qO- http://tempo:3200/...`.
 - A trace shows in Tempo about 30 s after the request (5 s batch export, then the live-store);
   an empty search right after a request means wait, not broken. `smoke` polls for 120 s.
-- Only `partitia_*` events become spans. A request with no engine event (`/up`, the app's own
-  controllers) has no trace unless the app adds OTel's Rack/Rails instrumentation (commented in
-  `opentelemetry.rb`) or turns on tenanted's request span (`config.partitia_tenanted.trace`).
-  `/auth/login` gives `partitia_cognito.sessions_controller.login_start` and the IdP discovery
-  call; that is the trace `smoke` looks for.
+- Every request is a trace rooted at OTel's server span (`GET /up`, `GET /auth/login`), with
+  the `partitia_*` spans as children (`rack_tracing`, default on). With
+  `PARTITIA_TELEMETRY_RACK_TRACING=false` only `partitia_*` events become spans and `/up` has
+  no trace. `/auth/login` gives `partitia_cognito.sessions_controller.login_start` and the IdP
+  discovery call either way; `smoke` takes the newest trace for the service.
 - Span attributes are `<event name>.<payload key>`
   (`span.partitia_cognito.sessions_controller.callback.outcome`); the dashboards group by them.
   Tempo 3 serves TraceQL metrics (`| rate()`, `quantile_over_time`) from its live-store with no

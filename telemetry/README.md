@@ -70,11 +70,12 @@ pcm up telemetry glitchtip
 ```
 
 The generator:
-- `bundle add`s `opentelemetry-sdk`, `opentelemetry-exporter-otlp` and `sentry-rails`
-  (the host owns the SDKs), skipping any already in the Gemfile.
+- `bundle add`s `opentelemetry-sdk`, `opentelemetry-exporter-otlp`, `sentry-rails` and
+  OTel's `opentelemetry-instrumentation-rack`, `-action_pack` and `-action_view` (the host
+  owns the SDKs), skipping any already in the Gemfile.
 - writes `config/initializers/opentelemetry.rb`: configures the OTel SDK from
-  `Partitia::Telemetry::Config` (service name, OTLP endpoint) and calls
-  `Partitia::Telemetry.install!`.
+  `Partitia::Telemetry::Config` (service name, OTLP endpoint, request tracing, below) and
+  calls `Partitia::Telemetry.install!`.
 - writes `config/initializers/sentry.rb`: `Sentry.init` from `error_dsn`, only when
   it is set; otherwise error reporting is off. It subscribes Sentry to the Rails error
   reporter (`config.rails.register_error_subscriber`, off in sentry-rails), so
@@ -84,7 +85,37 @@ The generator:
 
 It is idempotent: a second run adds no gems, leaves both initializers alone (once
 written they are the app's; edit freely) and asks nothing. No endpoint or DSN is
-written into the app.
+written into the app. It prints what it added (or "Nothing added").
+
+An app installed before request tracing existed is upgraded by re-running it: it adds the
+three instrumentation gems and injects the `if Partitia::Telemetry::Config.rack_tracing`
+block into the app's `OpenTelemetry::SDK.configure` block. A file that already mentions
+`rack_tracing` is left alone; one with no such block gets the snippet printed to add by hand.
+
+## Request tracing
+
+With `rack_tracing` on (the default) the generated initializer `c.use`s OTel's standard
+instrumentation:
+
+- **Rack**: one `SERVER` span per request (`http.request.method`, `url.path`,
+  `http.response.status_code`).
+- **ActionPack**: names that span by route (`GET /up`, `GET /auth/login`) and adds
+  `http.route`, `code.namespace` (the controller) and `code.function` (the action). It adds
+  no span of its own.
+- **ActionView**: `render_template`/`render_partial`/`render_layout` spans under it.
+
+The bridge opens each `partitia_*` span in the current OTel context, so an engine's spans
+(`partitia_cognito.sessions_controller.login_start`, …) are children of the request span,
+one trace per request. ActiveRecord is not traced (that would be one span per query); add
+`opentelemetry-instrumentation-active_record` and `c.use` it yourself if you want it.
+
+These are hand-picked rather than `opentelemetry-instrumentation-rails`, which `use`s every
+Rails instrumentation at once (ActiveRecord, ActiveJob, ActionMailer, ActiveStorage, …).
+
+`PARTITIA_TELEMETRY_RACK_TRACING=false` (or `rack_tracing: false` in
+`config/partitia_telemetry.yml`) turns request spans off: the instrumentation is never
+`use`d, no middleware is inserted, and the `partitia_*` spans still export, each a root of
+its own trace.
 
 The `Railtie` calls `Partitia::Telemetry.install!` on boot regardless; the explicit
 call in the initializer just keeps the wiring visible next to the SDK config it
@@ -113,15 +144,16 @@ rereads the dir every 30 s). Both query Tempo with TraceQL metrics (Tempo 3's
 live-store: recent data only, no Prometheus) and filter on a `service.name` variable:
 
 - **Partitia / Overview**: span rate, p95 latency, errored spans and spans per service,
-  by event name; the request span (`partitia_tenanted.telemetry_middleware.request`,
-  with `config.partitia_tenanted.trace`); recent errored and slow traces.
+  by event name; HTTP requests from the OTel server spans (`rack_tracing`): rate and p95
+  latency by route, and rate by status code; the request span
+  (`partitia_tenanted.telemetry_middleware.request`, with `config.partitia_tenanted.trace`);
+  recent errored and slow traces.
 - **Partitia / Identity**: sign-in outcomes and latency (cognito's callback), login
   starts, IdP calls, token verification and code exchange; iam's identity resolution
   and authorization gate; tenanted's tenant resolution, by outcome and by tenant.
 
 An attribute is `<event name>.<payload key>` (`span.partitia_cognito.sessions_controller.callback.outcome`).
-The app's own requests have no span unless it adds OTel's Rack/Rails instrumentation
-(see `config/initializers/opentelemetry.rb`).
+The app's requests have a span when `rack_tracing` is on (the default; see Request tracing).
 
 ## Configuration
 
@@ -136,6 +168,7 @@ ascending priority, from `config/partitia_telemetry.yml`, then
 | `otlp_endpoint` | `PARTITIA_TELEMETRY_OTLP_ENDPOINT` | `http://localhost:4318` (pcm `stack/telemetry`) | OTLP/HTTP base URL; `/v1/traces` is appended |
 | `error_dsn` | `PARTITIA_TELEMETRY_ERROR_DSN` | nil: error reporting off | GlitchTip/Sentry DSN. A secret: credentials or ENV only |
 | `prefixes` | `PARTITIA_TELEMETRY_PREFIXES` (comma list) | `partitia` | event-name families the span bridge subscribes to |
+| `rack_tracing` | `PARTITIA_TELEMETRY_RACK_TRACING` | `true` | request spans (Rack, ActionPack, ActionView; see Request tracing). A boolean: `false`, `0`, `no` turn it off |
 
 `pt services` creates the app's GlitchTip project and stores its DSN
 (`config/partitia_telemetry.local.yml`, gitignored, or fnox with
