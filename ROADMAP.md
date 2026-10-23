@@ -359,7 +359,7 @@ capabilities go to anfs as `anfs report` feature requests.
 - [ ] **S8 Tenant data lifecycle:** export, deletion (GDPR) and backup per tenant (one database
       per tenant makes this cheap)
 
-Left to apps: feature flags, billing.
+Left to apps: billing; feature flags through flipper (appwork ROADMAP).
 
 ## D9 — UI: Phlex and RubyUI
 
