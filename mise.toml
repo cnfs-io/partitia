@@ -1,16 +1,11 @@
 # Dev tooling for the partitia repo (not the gems' runtime: each gem uses its own Ruby).
 #
-# Playwright drives a real (headless) Chromium for UI work (D7) and, later, a browser-level
-# `pt smoke --login`. The MCP server gives an agent the same browser: snapshots,
-# screenshots, clicks and forms.
-#
-# First time:  mise trust && mise install && mise run browsers
+# chrome-devtools-axi: the browser for agents (and people) doing UI work (D7). A CLI over
+# Chrome DevTools: open, snapshot (accessibility tree with @uids), click/fill, screenshot,
+# console, network. Headless by default, CHROME_DEVTOOLS_AXI_HEADED=1 to watch; use
+# CHROME_DEVTOOLS_AXI_SESSION=<name> per agent so parallel agents don't share a browser.
+# Needs Google Chrome installed.
 
 [tools]
 node = "26"
-"npm:playwright" = "1.64.1"
-"npm:@playwright/mcp" = "0.0.83"
-
-[tasks.browsers]
-description = "Install Playwright's Chromium (into ~/Library/Caches/ms-playwright or ~/.cache/ms-playwright)"
-run = "playwright install chromium"
+"npm:chrome-devtools-axi" = "0.1.39"
