@@ -338,8 +338,17 @@ Kept in view, not scheduled:
 
 ## Outside this repo
 
-- [ ] appwork: its gems still use the old names (`CnfsSupport`, `cnfs_*` gems, `Iam::`, `iam_`
-      tables), about 45 files across chatter, chorus, gtd, micro_manager and okf
+- [x] appwork (D8): gems renamed `appwork-<name>` / `Appwork::<Name>` (chatter, chorus, gtd,
+      manager, okf) on partitia's names and contract; specs and RuboCop green (gtd's 8 board
+      examples pending partitia-ui boards); see appwork's ROADMAP
+- [ ] For appwork, in this repo: `Partitia::Support.component_tag` tags events by the first
+      namespace segment, so appwork's are `partitia_appwork.*`, not `appwork_<name>.*`
+- [ ] For appwork, in the cnfs CLI: `pt engine check` assumes the `partitia-` prefix (take it from
+      the gemspec); `pt ci` can't bundle a repo whose gems come from gem-local (ruby-ci mounts
+      only the repo)
+- [ ] Gem distribution: generated apps' and appwork's lockfiles record this machine's gem-local
+      path, so CI bundles unfrozen. Decide at the pause: publish to a gem server (pcm gemstash),
+      git sources, or keep paths
 - [ ] **Manual test (the person):** `PARTITIA_SECRETS_STORE=fnox pt services` against the real
       1Password vault through the space's service-account token. Only `fnox set --dry-run` and
       local providers have been tested; check the DSN lands in the vault, fnox exports
